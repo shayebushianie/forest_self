@@ -1,0 +1,16 @@
+[2026-05-30 17:47:58.995] [INFO] Forest application started.
+[2026-05-30 17:47:58.996] [INFO] Database opened: D:/No.6CollaborationProject/forest_self/build/sessions.dat (0 records)
+[2026-05-30 17:47:58.996] [INFO] CoinManager loaded. Balance: 0
+[2026-05-30 17:47:58.996] [INFO] RuleEngine initialized with 6 blacklisted processes.
+[2026-05-30 17:47:58.996] [INFO] Core components initialized.
+[2026-05-30 17:47:59.094] [INFO] MainWindow displayed.
+[2026-05-30 19:15:52.711] [INFO] Forest application started.
+[2026-05-30 19:15:52.712] [INFO] Database opened: D:/No.6CollaborationProject/forest_self/build/sessions.dat (0 records)
+[2026-05-30 19:15:52.712] [INFO] CoinManager loaded. Balance: 0
+[2026-05-30 19:15:52.712] [INFO] RuleEngine initialized with 6 blacklisted processes.
+[2026-05-30 19:15:52.712] [INFO] Core components initialized.
+[2026-05-30 19:15:52.984] [INFO] MainWindow displayed.
+[2026-05-30 20:06:14.363] [INFO] Forest application started.
+[2026-05-30 20:06:27.741] [INFO] User logged in. userId=1
+[2026-05-30 20:06:28.031] [INFO] MainWindow displayed.
+[2026-05-30 20:06:56.925] [INFO] Forest application exiting.

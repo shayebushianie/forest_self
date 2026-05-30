@@ -1,0 +1,452 @@
+2026-05-30 04:49:44,835 - aqt.main - INFO - installer 4936 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 04:49:44,835 - aqt.helper - DEBUG - helper 4936 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 04:49:49,140 - aqt.helper - DEBUG - helper 15924 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:49:49,140 - aqt.helper - DEBUG - helper 20768 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:49:49,140 - aqt.helper - DEBUG - helper 11720 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:49:49,166 - aqt.helper - DEBUG - helper 22492 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:49:50,939 - aqt.helper - INFO - helper 11720 Downloading qtdeclarative...
+2026-05-30 04:49:50,939 - aqt.helper - INFO - helper 22492 Downloading qttools...
+2026-05-30 04:49:50,939 - aqt.installer - DEBUG - installer 11720 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:50,939 - aqt.installer - DEBUG - installer 22492 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:50,951 - aqt.helper - INFO - helper 15924 Downloading qtbase...
+2026-05-30 04:49:50,951 - aqt.installer - DEBUG - installer 15924 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:50,998 - aqt.helper - INFO - helper 20768 Downloading qtsvg...
+2026-05-30 04:49:50,998 - aqt.installer - DEBUG - installer 20768 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:52,779 - aqt.helper - DEBUG - helper 11720 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:52,779 - aqt.helper - INFO - helper 11720 Redirected: mirror.ossplanet.net
+2026-05-30 04:49:52,793 - aqt.helper - DEBUG - helper 15924 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:52,793 - aqt.helper - INFO - helper 15924 Redirected: mirror.ossplanet.net
+2026-05-30 04:49:52,815 - aqt.helper - DEBUG - helper 20768 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:52,815 - aqt.helper - INFO - helper 20768 Redirected: mirror.ossplanet.net
+2026-05-30 04:49:52,849 - aqt.helper - DEBUG - helper 22492 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:49:52,849 - aqt.helper - INFO - helper 22492 Redirected: mirror.ossplanet.net
+2026-05-30 04:50:18,169 - aqt.helper - WARNING - helper 11720 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://master.qt.io/'.
+2026-05-30 04:50:18,170 - aqt.installer - DEBUG - installer 11720 Download URL: https://master.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:18,486 - aqt.helper - WARNING - helper 15924 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://ftp1.nluug.nl/languages/qt/'.
+2026-05-30 04:50:18,486 - aqt.installer - DEBUG - installer 15924 Download URL: https://ftp1.nluug.nl/languages/qt/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:18,542 - aqt.helper - WARNING - helper 20768 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://qt.mirror.constant.com/'.
+2026-05-30 04:50:18,543 - aqt.installer - DEBUG - installer 20768 Download URL: https://qt.mirror.constant.com/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:18,558 - aqt.helper - WARNING - helper 22492 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://ftp2.nluug.nl/languages/qt/'.
+2026-05-30 04:50:18,558 - aqt.installer - DEBUG - installer 22492 Download URL: https://ftp2.nluug.nl/languages/qt/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:21,445 - aqt.installer - INFO - installer 20768 Finished installation of qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 32.29190630
+2026-05-30 04:50:21,455 - aqt.helper - DEBUG - helper 20768 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:50:23,558 - aqt.helper - INFO - helper 20768 Downloading qttranslations...
+2026-05-30 04:50:23,558 - aqt.installer - DEBUG - installer 20768 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:25,927 - aqt.helper - DEBUG - helper 20768 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:25,927 - aqt.helper - INFO - helper 20768 Redirected: mirror.ossplanet.net
+2026-05-30 04:50:31,708 - aqt.helper - DEBUG - helper 15924 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341d3dcompiler_47-x64.7z.sha256
+2026-05-30 04:50:31,833 - aqt.helper - DEBUG - helper 22492 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z.sha256
+2026-05-30 04:50:33,655 - aqt.helper - INFO - helper 15924 Downloading d3dcompiler_47...
+2026-05-30 04:50:33,655 - aqt.installer - DEBUG - installer 15924 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 04:50:33,729 - aqt.helper - INFO - helper 22492 Downloading opengl32sw...
+2026-05-30 04:50:33,729 - aqt.installer - DEBUG - installer 22492 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z
+2026-05-30 04:50:35,439 - aqt.helper - DEBUG - helper 15924 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 04:50:35,439 - aqt.helper - INFO - helper 15924 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:50:35,529 - aqt.helper - DEBUG - helper 22492 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z
+2026-05-30 04:50:35,529 - aqt.helper - INFO - helper 22492 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:50:37,595 - aqt.installer - INFO - installer 15924 Finished installation of d3dcompiler_47-x64.7z in 5.88896990
+2026-05-30 04:50:39,858 - aqt.installer - INFO - installer 11720 Finished installation of qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 50.71864620
+2026-05-30 04:50:41,500 - aqt.installer - INFO - installer 22492 Finished installation of opengl32sw-64-mesa_11_2_2-signed_sha256.7z in 9.66948510
+2026-05-30 04:50:50,836 - aqt.helper - WARNING - helper 20768 Connection to 'https://download.qt.io' failed. Retrying with fallback 'https://ftp.fau.de/qtproject/'.
+2026-05-30 04:50:50,836 - aqt.installer - DEBUG - installer 20768 Download URL: https://ftp.fau.de/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:50:53,518 - aqt.installer - INFO - installer 20768 Finished installation of qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 32.06434360
+2026-05-30 04:50:53,528 - aqt.installer - WARNING - installer 4936 Caught ArchiveConnectionError, terminating installer workers
+2026-05-30 04:50:53,536 - aqt.main - ERROR - installer 4936 Connection error: (MaxRetryError('HTTPSConnectionPool(host=\'ftp1.nluug.nl\', port=443): Max retries exceeded with url: /languages/qt/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for \'ftp1.nluug.nl\'. (_ssl.c:1010)")))'),)
+2026-05-30 04:51:13,030 - aqt.main - INFO - installer 19496 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 04:51:13,031 - aqt.helper - DEBUG - helper 19496 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 04:51:16,189 - aqt.main - ERROR - installer 19496 Failed to locate XML data for Qt version '6.5.3'.
+==============================Suggested follow-up:==============================
+* Please use 'aqt list-qt windows desktop' to show versions available.
+2026-05-30 04:51:20,827 - aqt.helper - DEBUG - helper 20500 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 04:51:24,586 - aqt.helper - DEBUG - helper 20500 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653_wasm_singlethread/Updates.xml.sha256
+2026-05-30 04:51:28,272 - aqt.helper - DEBUG - helper 20500 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653_wasm_multithread/Updates.xml.sha256
+2026-05-30 04:51:38,722 - aqt.main - INFO - installer 4936 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 04:51:38,722 - aqt.helper - DEBUG - helper 4936 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 04:51:42,475 - aqt.main - ERROR - installer 4936 The packages ['qtbase', 'qttools', 'qtwidgets'] were not found while parsing XML of package information!
+==============================Suggested follow-up:==============================
+* Please use 'aqt list-qt windows desktop --modules 6.5.3 <arch>' to show modules available.
+2026-05-30 04:51:46,949 - aqt.main - INFO - installer 21252 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 04:51:46,949 - aqt.helper - DEBUG - helper 21252 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 04:51:51,034 - aqt.helper - DEBUG - helper 10716 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:51:51,034 - aqt.helper - DEBUG - helper 19752 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:51:51,034 - aqt.helper - DEBUG - helper 10848 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:51:51,034 - aqt.helper - DEBUG - helper 21508 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:51:52,878 - aqt.helper - INFO - helper 10848 Downloading qtdeclarative...
+2026-05-30 04:51:52,879 - aqt.installer - DEBUG - installer 10848 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:52,901 - aqt.helper - INFO - helper 19752 Downloading qtsvg...
+2026-05-30 04:51:52,901 - aqt.installer - DEBUG - installer 19752 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:52,901 - aqt.helper - INFO - helper 10716 Downloading qtbase...
+2026-05-30 04:51:52,901 - aqt.installer - DEBUG - installer 10716 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:52,912 - aqt.helper - INFO - helper 21508 Downloading qttools...
+2026-05-30 04:51:52,912 - aqt.installer - DEBUG - installer 21508 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:54,717 - aqt.helper - DEBUG - helper 21508 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:54,717 - aqt.helper - INFO - helper 21508 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:51:54,729 - aqt.helper - DEBUG - helper 19752 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:54,729 - aqt.helper - INFO - helper 19752 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:51:54,741 - aqt.helper - DEBUG - helper 10716 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:54,741 - aqt.helper - INFO - helper 10716 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:51:54,762 - aqt.helper - DEBUG - helper 10848 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:51:54,762 - aqt.helper - INFO - helper 10848 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:51:56,548 - aqt.installer - INFO - installer 19752 Finished installation of qtsvg-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 5.50877860
+2026-05-30 04:51:56,556 - aqt.helper - DEBUG - helper 19752 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:51:59,028 - aqt.helper - INFO - helper 19752 Downloading qttranslations...
+2026-05-30 04:51:59,028 - aqt.installer - DEBUG - installer 19752 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:01,324 - aqt.helper - DEBUG - helper 19752 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:01,324 - aqt.helper - INFO - helper 19752 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:04,999 - aqt.installer - INFO - installer 19752 Finished installation of qttranslations-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 8.44476470
+2026-05-30 04:52:05,011 - aqt.helper - DEBUG - helper 19752 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341d3dcompiler_47-x64.7z.sha256
+2026-05-30 04:52:07,388 - aqt.helper - INFO - helper 19752 Downloading d3dcompiler_47...
+2026-05-30 04:52:07,388 - aqt.installer - DEBUG - installer 19752 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 04:52:09,335 - aqt.helper - DEBUG - helper 19752 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 04:52:09,335 - aqt.helper - INFO - helper 19752 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:09,688 - aqt.installer - INFO - installer 21508 Finished installation of qttools-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 18.64761180
+2026-05-30 04:52:09,698 - aqt.helper - DEBUG - helper 21508 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z.sha256
+2026-05-30 04:52:11,984 - aqt.helper - INFO - helper 21508 Downloading opengl32sw...
+2026-05-30 04:52:11,984 - aqt.installer - DEBUG - installer 21508 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z
+2026-05-30 04:52:12,646 - aqt.installer - INFO - installer 19752 Finished installation of d3dcompiler_47-x64.7z in 7.63979690
+2026-05-30 04:52:14,306 - aqt.helper - DEBUG - helper 21508 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_msvc2019_64/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z
+2026-05-30 04:52:14,306 - aqt.helper - INFO - helper 21508 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:18,778 - aqt.installer - INFO - installer 10716 Finished installation of qtbase-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 27.73838850
+2026-05-30 04:52:19,121 - aqt.installer - INFO - installer 21508 Finished installation of opengl32sw-64-mesa_11_2_2-signed_sha256.7z in 9.43378660
+2026-05-30 04:52:25,965 - aqt.installer - INFO - installer 10848 Finished installation of qtdeclarative-Windows-Windows_10_22H2-MSVC2019-Windows-Windows_10_22H2-X86_64.7z in 34.92684550
+2026-05-30 04:52:26,273 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\bin\qmake.exe
+2026-05-30 04:52:26,279 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Concurrent.prl
+2026-05-30 04:52:26,284 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Concurrentd.prl
+2026-05-30 04:52:26,289 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Core.prl
+2026-05-30 04:52:26,293 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Cored.prl
+2026-05-30 04:52:26,296 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6DBus.prl
+2026-05-30 04:52:26,296 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6DBusd.prl
+2026-05-30 04:52:26,303 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Designer.prl
+2026-05-30 04:52:26,306 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6DesignerComponents.prl
+2026-05-30 04:52:26,310 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6DesignerComponentsd.prl
+2026-05-30 04:52:26,315 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Designerd.prl
+2026-05-30 04:52:26,319 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6DeviceDiscoverySupport.prl
+2026-05-30 04:52:26,328 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6DeviceDiscoverySupportd.prl
+2026-05-30 04:52:26,335 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6EntryPoint.prl
+2026-05-30 04:52:26,342 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6EntryPointd.prl
+2026-05-30 04:52:26,347 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6ExampleIcons.prl
+2026-05-30 04:52:26,353 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6ExampleIconsd.prl
+2026-05-30 04:52:26,355 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6FbSupport.prl
+2026-05-30 04:52:26,361 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6FbSupportd.prl
+2026-05-30 04:52:26,365 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Gui.prl
+2026-05-30 04:52:26,370 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Guid.prl
+2026-05-30 04:52:26,374 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Help.prl
+2026-05-30 04:52:26,378 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Helpd.prl
+2026-05-30 04:52:26,383 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsAnimation.prl
+2026-05-30 04:52:26,385 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsAnimationd.prl
+2026-05-30 04:52:26,391 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsFolderListModel.prl
+2026-05-30 04:52:26,395 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsFolderListModeld.prl
+2026-05-30 04:52:26,399 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsQmlModels.prl
+2026-05-30 04:52:26,401 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsQmlModelsd.prl
+2026-05-30 04:52:26,401 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsSettings.prl
+2026-05-30 04:52:26,401 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsSettingsd.prl
+2026-05-30 04:52:26,401 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsSharedImage.prl
+2026-05-30 04:52:26,418 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsSharedImaged.prl
+2026-05-30 04:52:26,423 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsWavefrontMesh.prl
+2026-05-30 04:52:26,427 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6LabsWavefrontMeshd.prl
+2026-05-30 04:52:26,430 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Network.prl
+2026-05-30 04:52:26,430 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Networkd.prl
+2026-05-30 04:52:26,430 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6OpenGL.prl
+2026-05-30 04:52:26,430 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6OpenGLd.prl
+2026-05-30 04:52:26,445 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6OpenGLWidgets.prl
+2026-05-30 04:52:26,445 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6OpenGLWidgetsd.prl
+2026-05-30 04:52:26,445 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6PacketProtocol.prl
+2026-05-30 04:52:26,445 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6PacketProtocold.prl
+2026-05-30 04:52:26,445 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6PrintSupport.prl
+2026-05-30 04:52:26,464 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6PrintSupportd.prl
+2026-05-30 04:52:26,467 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Qml.prl
+2026-05-30 04:52:26,473 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlCompiler.prl
+2026-05-30 04:52:26,477 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlCompilerd.prl
+2026-05-30 04:52:26,482 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlCore.prl
+2026-05-30 04:52:26,486 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlCored.prl
+2026-05-30 04:52:26,491 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Qmld.prl
+2026-05-30 04:52:26,495 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlDebug.prl
+2026-05-30 04:52:26,499 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlDebugd.prl
+2026-05-30 04:52:26,502 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlDom.prl
+2026-05-30 04:52:26,505 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlDomd.prl
+2026-05-30 04:52:26,505 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlLocalStorage.prl
+2026-05-30 04:52:26,505 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlLocalStoraged.prl
+2026-05-30 04:52:26,505 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlModels.prl
+2026-05-30 04:52:26,521 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlModelsd.prl
+2026-05-30 04:52:26,527 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlTypeRegistrar.prl
+2026-05-30 04:52:26,531 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlTypeRegistrard.prl
+2026-05-30 04:52:26,536 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlWorkerScript.prl
+2026-05-30 04:52:26,540 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlWorkerScriptd.prl
+2026-05-30 04:52:26,544 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlXmlListModel.prl
+2026-05-30 04:52:26,544 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QmlXmlListModeld.prl
+2026-05-30 04:52:26,544 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Quick.prl
+2026-05-30 04:52:26,544 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickControls2.prl
+2026-05-30 04:52:26,544 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickControls2d.prl
+2026-05-30 04:52:26,563 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickControls2Impl.prl
+2026-05-30 04:52:26,567 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickControls2Impld.prl
+2026-05-30 04:52:26,572 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickControlsTestUtils.prl
+2026-05-30 04:52:26,577 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickControlsTestUtilsd.prl
+2026-05-30 04:52:26,580 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Quickd.prl
+2026-05-30 04:52:26,585 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickDialogs2.prl
+2026-05-30 04:52:26,589 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickDialogs2d.prl
+2026-05-30 04:52:26,590 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickDialogs2QuickImpl.prl
+2026-05-30 04:52:26,590 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickDialogs2QuickImpld.prl
+2026-05-30 04:52:26,590 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickDialogs2Utils.prl
+2026-05-30 04:52:26,590 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickDialogs2Utilsd.prl
+2026-05-30 04:52:26,606 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickEffects.prl
+2026-05-30 04:52:26,606 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickEffectsd.prl
+2026-05-30 04:52:26,606 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickLayouts.prl
+2026-05-30 04:52:26,606 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickLayoutsd.prl
+2026-05-30 04:52:26,622 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickParticles.prl
+2026-05-30 04:52:26,627 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickParticlesd.prl
+2026-05-30 04:52:26,629 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickShapes.prl
+2026-05-30 04:52:26,635 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickShapesd.prl
+2026-05-30 04:52:26,639 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickTemplates2.prl
+2026-05-30 04:52:26,643 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickTemplates2d.prl
+2026-05-30 04:52:26,647 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickTest.prl
+2026-05-30 04:52:26,651 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickTestd.prl
+2026-05-30 04:52:26,655 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickTestUtils.prl
+2026-05-30 04:52:26,655 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickTestUtilsd.prl
+2026-05-30 04:52:26,655 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickWidgets.prl
+2026-05-30 04:52:26,655 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6QuickWidgetsd.prl
+2026-05-30 04:52:26,655 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Sql.prl
+2026-05-30 04:52:26,675 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Sqld.prl
+2026-05-30 04:52:26,679 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Svg.prl
+2026-05-30 04:52:26,683 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Svgd.prl
+2026-05-30 04:52:26,684 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6SvgWidgets.prl
+2026-05-30 04:52:26,684 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6SvgWidgetsd.prl
+2026-05-30 04:52:26,684 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Test.prl
+2026-05-30 04:52:26,684 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Testd.prl
+2026-05-30 04:52:26,701 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6UiTools.prl
+2026-05-30 04:52:26,705 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6UiToolsd.prl
+2026-05-30 04:52:26,710 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Widgets.prl
+2026-05-30 04:52:26,713 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Widgetsd.prl
+2026-05-30 04:52:26,713 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Xml.prl
+2026-05-30 04:52:26,713 - aqt.updater - INFO - updater 21252 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\msvc2019_64\lib\Qt6Xmld.prl
+2026-05-30 04:52:26,713 - aqt.main - INFO - installer 21252 Finished installation
+2026-05-30 04:52:26,713 - aqt.main - INFO - installer 21252 Time elapsed: 39.77467140 second
+2026-05-30 04:52:44,681 - aqt.main - INFO - installer 20808 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 04:52:44,681 - aqt.helper - DEBUG - helper 20808 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 04:52:48,947 - aqt.helper - DEBUG - helper 16056 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:52:48,954 - aqt.helper - DEBUG - helper 21280 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:52:48,955 - aqt.helper - DEBUG - helper 3300 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:52:50,799 - aqt.helper - INFO - helper 10504 Downloading qtsvg...
+
+2026-05-30 04:52:50,800 - aqt.helper - INFO - helper 21280 Downloading qtdeclarative...
+2026-05-30 04:52:50,800 - aqt.installer - DEBUG - installer 3300 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:50,800 - aqt.installer - DEBUG - installer 16056 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:50,800 - aqt.installer - DEBUG - installer 21280 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:50,800 - aqt.installer - DEBUG - installer 10504 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:52,664 - aqt.helper - DEBUG - helper 3300 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:52,664 - aqt.helper - INFO - helper 3300 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:52,667 - aqt.helper - DEBUG - helper 10504 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:52,667 - aqt.helper - INFO - helper 10504 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:52,696 - aqt.helper - DEBUG - helper 16056 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:52,696 - aqt.helper - INFO - helper 16056 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:52,711 - aqt.helper - DEBUG - helper 21280 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:52,712 - aqt.helper - INFO - helper 21280 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:52:54,500 - aqt.installer - INFO - installer 10504 Finished installation of qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 5.55423010
+2026-05-30 04:52:54,510 - aqt.helper - DEBUG - helper 10504 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 04:52:56,639 - aqt.helper - INFO - helper 10504 Downloading qttranslations...
+2026-05-30 04:52:56,639 - aqt.installer - DEBUG - installer 10504 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:59,234 - aqt.helper - DEBUG - helper 10504 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 04:52:59,234 - aqt.helper - INFO - helper 10504 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:53:02,615 - aqt.installer - INFO - installer 10504 Finished installation of qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 8.10501540
+2026-05-30 04:53:02,621 - aqt.helper - DEBUG - helper 10504 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z.sha256
+2026-05-30 04:53:04,767 - aqt.helper - INFO - helper 10504 Downloading MinGW...
+2026-05-30 04:53:04,767 - aqt.installer - DEBUG - installer 10504 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z
+2026-05-30 04:53:06,218 - aqt.installer - INFO - installer 3300 Finished installation of qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 17.26558740
+2026-05-30 04:53:06,235 - aqt.helper - DEBUG - helper 3300 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341d3dcompiler_47-x64.7z.sha256
+2026-05-30 04:53:06,588 - aqt.helper - DEBUG - helper 10504 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z
+2026-05-30 04:53:06,588 - aqt.helper - INFO - helper 10504 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:53:07,948 - aqt.helper - INFO - helper 3300 Downloading d3dcompiler_47...
+2026-05-30 04:53:07,948 - aqt.installer - DEBUG - installer 3300 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 04:53:08,258 - aqt.installer - INFO - installer 16056 Finished installation of qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 19.31411310
+2026-05-30 04:53:08,272 - aqt.helper - DEBUG - helper 16056 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z.sha256
+2026-05-30 04:53:08,507 - aqt.installer - INFO - installer 10504 Finished installation of MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z in 5.88509650
+2026-05-30 04:53:09,701 - aqt.helper - DEBUG - helper 3300 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 04:53:09,701 - aqt.helper - INFO - helper 3300 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:53:10,150 - aqt.helper - INFO - helper 16056 Downloading opengl32sw...
+2026-05-30 04:53:10,150 - aqt.installer - DEBUG - installer 16056 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z
+2026-05-30 04:53:12,019 - aqt.helper - DEBUG - helper 16056 Asked to redirect(302) to: https://ftp.jaist.ac.jp/pub/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z
+2026-05-30 04:53:12,019 - aqt.helper - INFO - helper 16056 Redirected: ftp.jaist.ac.jp
+2026-05-30 04:53:12,031 - aqt.installer - INFO - installer 3300 Finished installation of d3dcompiler_47-x64.7z in 5.79816960
+2026-05-30 04:53:17,917 - aqt.installer - INFO - installer 16056 Finished installation of opengl32sw-64-mesa_11_2_2-signed_sha256.7z in 9.64618050
+2026-05-30 04:54:40,370 - aqt.installer - INFO - installer 21280 Finished installation of qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 111.41766810
+2026-05-30 04:54:41,059 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\bin\qmake.exe
+2026-05-30 04:54:41,063 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Concurrent.pc
+2026-05-30 04:54:41,071 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Core.pc
+2026-05-30 04:54:41,075 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6DBus.pc
+2026-05-30 04:54:41,075 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Designer.pc
+2026-05-30 04:54:41,075 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Gui.pc
+2026-05-30 04:54:41,085 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Help.pc
+2026-05-30 04:54:41,091 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6LabsAnimation.pc
+2026-05-30 04:54:41,091 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6LabsFolderListModel.pc
+2026-05-30 04:54:41,091 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6LabsQmlModels.pc
+2026-05-30 04:54:41,091 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6LabsSettings.pc
+2026-05-30 04:54:41,107 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6LabsSharedImage.pc
+2026-05-30 04:54:41,110 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6LabsWavefrontMesh.pc
+2026-05-30 04:54:41,113 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Linguist.pc
+2026-05-30 04:54:41,113 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Network.pc
+2026-05-30 04:54:41,123 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6OpenGL.pc
+2026-05-30 04:54:41,128 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6OpenGLWidgets.pc
+2026-05-30 04:54:41,132 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Platform.pc
+2026-05-30 04:54:41,136 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6PrintSupport.pc
+2026-05-30 04:54:41,140 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Qml.pc
+2026-05-30 04:54:41,145 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QmlCore.pc
+2026-05-30 04:54:41,148 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QmlIntegration.pc
+2026-05-30 04:54:41,148 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QmlLocalStorage.pc
+2026-05-30 04:54:41,148 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QmlModels.pc
+2026-05-30 04:54:41,148 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QmlWorkerScript.pc
+2026-05-30 04:54:41,164 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QmlXmlListModel.pc
+2026-05-30 04:54:41,164 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Quick.pc
+2026-05-30 04:54:41,164 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickControls2.pc
+2026-05-30 04:54:41,164 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickControls2Impl.pc
+2026-05-30 04:54:41,179 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickDialogs2.pc
+2026-05-30 04:54:41,184 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickDialogs2QuickImpl.pc
+2026-05-30 04:54:41,186 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickDialogs2Utils.pc
+2026-05-30 04:54:41,193 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickLayouts.pc
+2026-05-30 04:54:41,197 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickTemplates2.pc
+2026-05-30 04:54:41,202 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickTest.pc
+2026-05-30 04:54:41,207 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6QuickWidgets.pc
+2026-05-30 04:54:41,207 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Sql.pc
+2026-05-30 04:54:41,207 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Svg.pc
+2026-05-30 04:54:41,207 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6SvgWidgets.pc
+2026-05-30 04:54:41,207 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Test.pc
+2026-05-30 04:54:41,225 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6UiPlugin.pc
+2026-05-30 04:54:41,231 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6UiTools.pc
+2026-05-30 04:54:41,235 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Widgets.pc
+2026-05-30 04:54:41,237 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\pkgconfig\Qt6Xml.pc
+2026-05-30 04:54:41,237 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Concurrent.prl
+2026-05-30 04:54:41,237 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Core.prl
+2026-05-30 04:54:41,237 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6DBus.prl
+2026-05-30 04:54:41,237 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Designer.prl
+2026-05-30 04:54:41,257 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6DesignerComponents.prl
+2026-05-30 04:54:41,261 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6DeviceDiscoverySupport.prl
+2026-05-30 04:54:41,265 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6EntryPoint.prl
+2026-05-30 04:54:41,266 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6ExampleIcons.prl
+2026-05-30 04:54:41,266 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6FbSupport.prl
+2026-05-30 04:54:41,266 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Gui.prl
+2026-05-30 04:54:41,266 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Help.prl
+2026-05-30 04:54:41,282 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6LabsAnimation.prl
+2026-05-30 04:54:41,287 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6LabsFolderListModel.prl
+2026-05-30 04:54:41,291 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6LabsQmlModels.prl
+2026-05-30 04:54:41,295 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6LabsSettings.prl
+2026-05-30 04:54:41,299 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6LabsSharedImage.prl
+2026-05-30 04:54:41,303 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6LabsWavefrontMesh.prl
+2026-05-30 04:54:41,307 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Network.prl
+2026-05-30 04:54:41,312 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6OpenGL.prl
+2026-05-30 04:54:41,312 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6OpenGLWidgets.prl
+2026-05-30 04:54:41,312 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6PacketProtocol.prl
+2026-05-30 04:54:41,312 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6PrintSupport.prl
+2026-05-30 04:54:41,312 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Qml.prl
+2026-05-30 04:54:41,330 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlCompiler.prl
+2026-05-30 04:54:41,334 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlCore.prl
+2026-05-30 04:54:41,338 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlDebug.prl
+2026-05-30 04:54:41,341 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlDom.prl
+2026-05-30 04:54:41,341 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlLocalStorage.prl
+2026-05-30 04:54:41,341 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlModels.prl
+2026-05-30 04:54:41,341 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlTypeRegistrar.prl
+2026-05-30 04:54:41,356 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlWorkerScript.prl
+2026-05-30 04:54:41,361 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QmlXmlListModel.prl
+2026-05-30 04:54:41,365 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Quick.prl
+2026-05-30 04:54:41,369 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickControls2.prl
+2026-05-30 04:54:41,374 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickControls2Impl.prl
+2026-05-30 04:54:41,379 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickControlsTestUtils.prl
+2026-05-30 04:54:41,383 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickDialogs2.prl
+2026-05-30 04:54:41,391 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickDialogs2QuickImpl.prl
+2026-05-30 04:54:41,396 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickDialogs2Utils.prl
+2026-05-30 04:54:41,399 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickEffects.prl
+2026-05-30 04:54:41,399 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickLayouts.prl
+2026-05-30 04:54:41,399 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickParticles.prl
+2026-05-30 04:54:41,399 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickShapes.prl
+2026-05-30 04:54:41,399 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickTemplates2.prl
+2026-05-30 04:54:41,417 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickTest.prl
+2026-05-30 04:54:41,421 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickTestUtils.prl
+2026-05-30 04:54:41,426 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6QuickWidgets.prl
+2026-05-30 04:54:41,430 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Sql.prl
+2026-05-30 04:54:41,432 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Svg.prl
+2026-05-30 04:54:41,432 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6SvgWidgets.prl
+2026-05-30 04:54:41,432 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Test.prl
+2026-05-30 04:54:41,432 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6UiTools.prl
+2026-05-30 04:54:41,451 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Widgets.prl
+2026-05-30 04:54:41,455 - aqt.updater - INFO - updater 20808 Patching D:\No.6CollaborationProject\forest_self\Qt\6.5.3\mingw_64\lib\Qt6Xml.prl
+2026-05-30 04:54:41,460 - aqt.main - INFO - installer 20808 Finished installation
+2026-05-30 04:54:41,460 - aqt.main - INFO - installer 20808 Time elapsed: 116.77071220 second
+2026-05-30 17:44:12,374 - aqt.helper - DEBUG - helper 20848 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 17:44:17,488 - aqt.helper - DEBUG - helper 20848 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653_wasm_singlethread/Updates.xml.sha256
+2026-05-30 17:44:48,158 - aqt.main - INFO - installer 8796 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 17:44:48,158 - aqt.helper - DEBUG - helper 8796 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/Updates.xml.sha256
+2026-05-30 17:44:53,118 - aqt.helper - DEBUG - helper 8796 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/Updates.xml.sha256
+2026-05-30 17:44:57,897 - aqt.helper - DEBUG - helper 23596 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.mingw47/4.7.2-1-1x32-4.7.2-release-posix-sjlj-rev8.7z.sha256
+2026-05-30 17:45:01,641 - aqt.helper - INFO - helper 23596 Downloading qt.tools.mingw47...
+2026-05-30 17:45:01,641 - aqt.installer - DEBUG - installer 23596 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.mingw47/4.7.2-1-1x32-4.7.2-release-posix-sjlj-rev8.7z
+2026-05-30 17:45:03,962 - aqt.helper - DEBUG - helper 23596 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.mingw47/4.7.2-1-1x32-4.7.2-release-posix-sjlj-rev8.7z
+2026-05-30 17:45:03,962 - aqt.helper - INFO - helper 23596 Redirected: mirror.ossplanet.net
+2026-05-30 17:45:22,554 - aqt.installer - INFO - installer 23596 Finished installation of x32-4.7.2-release-posix-sjlj-rev8.7z in 24.65743310
+2026-05-30 17:45:22,641 - aqt.helper - DEBUG - helper 8796 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/Updates.xml.sha256
+2026-05-30 17:45:27,512 - aqt.helper - DEBUG - helper 8432 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw48/4.8.0-1-1x32-4.8.0-release-posix-dwarf-rev2.7z.sha256
+2026-05-30 17:45:29,462 - aqt.helper - INFO - helper 8432 Downloading qt.tools.win32_mingw48...
+2026-05-30 17:45:29,462 - aqt.installer - DEBUG - installer 8432 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw48/4.8.0-1-1x32-4.8.0-release-posix-dwarf-rev2.7z
+2026-05-30 17:45:31,468 - aqt.helper - DEBUG - helper 8432 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw48/4.8.0-1-1x32-4.8.0-release-posix-dwarf-rev2.7z
+2026-05-30 17:45:31,468 - aqt.helper - INFO - helper 8432 Redirected: mirror.ossplanet.net
+2026-05-30 17:45:48,858 - aqt.installer - INFO - installer 8432 Finished installation of x32-4.8.0-release-posix-dwarf-rev2.7z in 21.34569930
+2026-05-30 17:45:48,914 - aqt.helper - DEBUG - helper 8796 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/Updates.xml.sha256
+2026-05-30 17:45:54,265 - aqt.helper - DEBUG - helper 9512 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw482/4.8.2i686-4.8.2-release-posix-dwarf-rt_v3-rev3.7z.sha256
+2026-05-30 17:45:56,167 - aqt.helper - INFO - helper 9512 Downloading qt.tools.win32_mingw482...
+2026-05-30 17:45:56,167 - aqt.installer - DEBUG - installer 9512 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw482/4.8.2i686-4.8.2-release-posix-dwarf-rt_v3-rev3.7z
+2026-05-30 17:45:58,241 - aqt.helper - DEBUG - helper 9512 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw482/4.8.2i686-4.8.2-release-posix-dwarf-rt_v3-rev3.7z
+2026-05-30 17:45:58,241 - aqt.helper - INFO - helper 9512 Redirected: mirror.ossplanet.net
+2026-05-30 17:46:24,811 - aqt.installer - INFO - installer 9512 Finished installation of i686-4.8.2-release-posix-dwarf-rt_v3-rev3.7z in 30.55014520
+2026-05-30 17:46:24,897 - aqt.helper - DEBUG - helper 8796 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/Updates.xml.sha256
+2026-05-30 17:46:29,351 - aqt.helper - DEBUG - helper 23096 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw491/4.9.1-3i686-4.9.1-release-posix-dwarf-rt_v3-rev2.7z.sha256
+2026-05-30 17:46:31,388 - aqt.helper - INFO - helper 23096 Downloading qt.tools.win32_mingw491...
+2026-05-30 17:46:31,388 - aqt.installer - DEBUG - installer 23096 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw491/4.9.1-3i686-4.9.1-release-posix-dwarf-rt_v3-rev2.7z
+2026-05-30 17:46:33,225 - aqt.helper - DEBUG - helper 23096 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/tools_mingw/qt.tools.win32_mingw491/4.9.1-3i686-4.9.1-release-posix-dwarf-rt_v3-rev2.7z
+2026-05-30 17:46:33,225 - aqt.helper - INFO - helper 23096 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:07,612 - aqt.main - INFO - installer 11348 aqtinstall(aqt) v3.3.0 on Python 3.12.10 [CPython MSC v.1943 64 bit (AMD64)]
+2026-05-30 19:17:07,612 - aqt.helper - DEBUG - helper 11348 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/Updates.xml.sha256
+2026-05-30 19:17:11,914 - aqt.helper - DEBUG - helper 22332 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.addons.qtcharts.win64_mingw/6.5.3-0-202309260341qtcharts-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 19:17:11,914 - aqt.helper - DEBUG - helper 25432 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 19:17:11,918 - aqt.helper - DEBUG - helper 16400 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 19:17:11,921 - aqt.helper - DEBUG - helper 10744 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 19:17:13,826 - aqt.helper - INFO - helper 22332 Downloading qtcharts...
+2026-05-30 19:17:13,826 - aqt.installer - DEBUG - installer 22332 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.addons.qtcharts.win64_mingw/6.5.3-0-202309260341qtcharts-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:13,855 - aqt.helper - INFO - helper 16400 Downloading qtsvg...
+2026-05-30 19:17:13,855 - aqt.helper - INFO - helper 25432 Downloading qtbase...
+2026-05-30 19:17:13,855 - aqt.helper - INFO - helper 10744 Downloading qtdeclarative...
+2026-05-30 19:17:13,855 - aqt.installer - DEBUG - installer 16400 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:13,855 - aqt.installer - DEBUG - installer 25432 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:13,855 - aqt.installer - DEBUG - installer 10744 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:15,721 - aqt.helper - DEBUG - helper 22332 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.addons.qtcharts.win64_mingw/6.5.3-0-202309260341qtcharts-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:15,722 - aqt.helper - INFO - helper 22332 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:15,759 - aqt.helper - DEBUG - helper 16400 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:15,759 - aqt.helper - INFO - helper 16400 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:15,770 - aqt.helper - DEBUG - helper 25432 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:15,770 - aqt.helper - INFO - helper 25432 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:15,784 - aqt.helper - DEBUG - helper 10744 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:15,784 - aqt.helper - INFO - helper 10744 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:17,612 - aqt.installer - INFO - installer 16400 Finished installation of qtsvg-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 5.69497660
+2026-05-30 19:17:17,620 - aqt.helper - DEBUG - helper 16400 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 19:17:18,055 - aqt.installer - INFO - installer 22332 Finished installation of qtcharts-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 6.14278430
+2026-05-30 19:17:18,065 - aqt.helper - DEBUG - helper 22332 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z.sha256
+2026-05-30 19:17:19,873 - aqt.helper - INFO - helper 16400 Downloading qttools...
+2026-05-30 19:17:19,873 - aqt.installer - DEBUG - installer 16400 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:22,364 - aqt.helper - DEBUG - helper 16400 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:17:22,364 - aqt.helper - INFO - helper 16400 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:34,595 - aqt.installer - INFO - installer 25432 Finished installation of qtbase-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 22.68718840
+2026-05-30 19:17:34,612 - aqt.helper - DEBUG - helper 25432 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z.sha256
+2026-05-30 19:17:38,377 - aqt.helper - INFO - helper 25432 Downloading MinGW...
+2026-05-30 19:17:38,377 - aqt.installer - DEBUG - installer 25432 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z
+2026-05-30 19:17:45,424 - aqt.installer - INFO - installer 10744 Finished installation of qtdeclarative-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 33.50488750
+2026-05-30 19:17:45,438 - aqt.helper - DEBUG - helper 10744 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341d3dcompiler_47-x64.7z.sha256
+2026-05-30 19:17:47,411 - aqt.helper - INFO - helper 10744 Downloading d3dcompiler_47...
+2026-05-30 19:17:47,411 - aqt.installer - DEBUG - installer 10744 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 19:17:48,090 - aqt.helper - DEBUG - helper 25432 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z
+2026-05-30 19:17:48,090 - aqt.helper - INFO - helper 25432 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:49,544 - aqt.helper - DEBUG - helper 10744 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341d3dcompiler_47-x64.7z
+2026-05-30 19:17:49,544 - aqt.helper - INFO - helper 10744 Redirected: mirror.ossplanet.net
+2026-05-30 19:17:49,948 - aqt.installer - INFO - installer 25432 Finished installation of MinGW-w64-x86_64-11.2.0-release-posix-seh-rt_v9-rev1-runtime.7z in 15.33721990
+2026-05-30 19:17:49,958 - aqt.helper - DEBUG - helper 25432 Attempt to download checksum at https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341opengl32sw-64-mesa_11_2_2-signed_sha256.7z.sha256
+2026-05-30 19:17:51,123 - aqt.installer - INFO - installer 16400 Finished installation of qttools-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 33.50442340
+2026-05-30 19:17:52,133 - aqt.installer - INFO - installer 10744 Finished installation of d3dcompiler_47-x64.7z in 6.69732560
+2026-05-30 19:17:57,231 - aqt.helper - INFO - helper 22332 Downloading qttranslations...
+2026-05-30 19:17:57,231 - aqt.installer - DEBUG - installer 22332 Download URL: https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:18:03,129 - aqt.helper - DEBUG - helper 22332 Asked to redirect(302) to: https://mirror.ossplanet.net/qtproject/online/qtsdkrepository/windows_x86/desktop/qt6_653/qt.qt6.653.win64_mingw/6.5.3-0-202309260341qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z
+2026-05-30 19:18:03,129 - aqt.helper - INFO - helper 22332 Redirected: mirror.ossplanet.net
+2026-05-30 19:18:05,028 - aqt.installer - INFO - installer 22332 Finished installation of qttranslations-Windows-Windows_10_22H2-Mingw-Windows-Windows_10_22H2-X86_64.7z in 46.96444440

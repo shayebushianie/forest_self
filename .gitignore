@@ -1,0 +1,19 @@
+# 强力排除本地 Qt SDK 目录（10GB+，绝不提交）
+/Qt/
+
+# CMake 构建产物
+/build/
+
+# 本地生成的运行时数据文件
+*.dat
+sessions.dat
+coins.dat
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Windows 系统文件
+Thumbs.db
+Desktop.ini
