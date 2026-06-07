@@ -25,6 +25,7 @@ class QuoteProvider;
 class DatabaseManager;
 class TimerRing;
 class GardenCanvas;
+class PlantTimerWidget;
 class SettingsDialog;
 class AchievementEngine;
 class HistoryWidget;
@@ -70,7 +71,7 @@ private:
     PresetManager& presets_;
     AchievementEngine& achievements_;
 
-    TimerRing* timerRing_;
+    PlantTimerWidget* timerRing_;
     GardenCanvas* gardenCanvas_;
     QPushButton *startBtn_, *pauseBtn_, *abandonBtn_;
     QSystemTrayIcon* trayIcon_;
@@ -91,6 +92,7 @@ private:
     QComboBox* settingsTagCombo_ = nullptr;
     QListWidget* settingsBlacklistWidget_ = nullptr;
     QLineEdit* settingsBlacklistInput_ = nullptr;
+    QLineEdit* settingsOathInput_ = nullptr;
 };
 
 #endif // MAINWINDOW_H

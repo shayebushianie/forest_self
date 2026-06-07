@@ -21,6 +21,12 @@ void TimerRing::setQuote(const QString& quote)
     update();
 }
 
+void TimerRing::setOath(const QString& oath)
+{
+    oath_ = oath;
+    update();
+}
+
 void TimerRing::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
@@ -56,6 +62,15 @@ void TimerRing::paintEvent(QPaintEvent*)
             painter.setPen(progressPen);
             painter.drawArc(rect, 90 * 16, -360 * 16);
         }
+    }
+
+    // 树梢誓言
+    if (!oath_.isEmpty()) {
+        QFont oathFont("Microsoft YaHei", 12, QFont::Bold);
+        painter.setFont(oathFont);
+        painter.setPen(QColor("#8A9A86"));
+        QRectF oathRect(0, rect.top() - 30, width(), 30);
+        painter.drawText(oathRect, Qt::AlignCenter, oath_);
     }
 
     // 中心时间文字

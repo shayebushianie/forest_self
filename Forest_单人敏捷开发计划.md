@@ -1353,4 +1353,82 @@ Qt 安装：aqt install-qt windows desktop 6.5.3 win64_mingw --outputdir Qt/
 | — | 秒表模式（正计时） | ✅ |
 | — | 标签统计饼图 | ✅ |
 | — | 快捷专注预设 | ✅ |
+| — | 双专注模式（严格/温和） | ✅ |
+| — | 多账号系统 + 文件沙箱 | ✅ |
+| — | 成就系统（位图 + Toast） | ✅ |
+| — | 抽屉式导航栏 | ✅ |
+| — | 时间历程时间轴 | ✅ |
+| — | 违规梯度惩罚 + 纯粹时间 | ✅ |
+| — | 树梢誓言 | ✅ |
+| — | 8×8 自选网格种植 | ✅ |
+| — | 可拖动旋钮设时 + 中心植物生长 | ✅ |
 
+---
+
+## 十七、进阶功能清单（WBS 五周计划外追加）
+
+| # | 功能 | 核心文件 | 说明 |
+|---|------|----------|------|
+| 1 | 秒表模式 | `FocusController` + `PlantTimerWidget` | `TimerMode::STOPWATCH`，呼吸光晕动画，<10min 枯萎警告 |
+| 2 | 标签统计饼图 | `StatisticsDialog` + `StatisticsCalculator` | QPainter 手绘甜甜圈图，五标签配色，空数据优雅提示 |
+| 3 | 双专注模式 | `FocusController` + `SystemMonitor` + `MainWindow` | `STRICT_MODE` 10s 全屏警告自愈 / `GENTLE_MODE` 切屏不枯金币折半 |
+| 4 | 多账号系统 | `UserManager` + `LoginDialog` + `PathConfig` | `UserRecord` 64B + FNV-1a 加盐哈希 + `app_data/user_N/` 沙箱隔离 |
+| 5 | 成就系统 | `AchievementEngine` + `AchievementToast` + `CoinManager` | `WalletRecord` 位图算法，5 项成就，金边淡出 Toast 动画 |
+| 6 | 抽屉式导航栏 | `MainWindow` 重构 | `QStackedWidget` 4 页 + 60-180px 侧边栏 + `QPropertyAnimation` 双属性锁死动画 |
+| 7 | 时间历程时间轴 | `TimelineItemWidget` + `HistoryWidget` | QPainter 手绘纵向引线 + 彩色节点 + 首尾断线自适应 |
+| 8 | 违规梯度惩罚 | `FocusController` | `violationSeconds_` 累加 → 纯粹专注时间 + 4 级梯度金币系数 |
+| 9 | 树梢誓言 | `PlantTimerWidget` + `MainWindow` | 设置页输入 → 专注中圆环上方居中显示 |
+| 10 | 8×8 自选网格 | `GridSelectDialog` + `GardenCanvas` | `gridIndex` 字段，成功弹窗选位，画布按坐标精确绘制 |
+| 11 | 可拖动旋钮设时 | `PlantTimerWidget` | 圆环拖动设时 10-120min，中心植物 4 阶段生长形态，运行态旋钮自动跟进 |
+| 12 | 深林绿视觉主题 | 全局 QSS + 多个 Widget 重构 | 6 色墨绿色盘 + 双层圆环 + 卡片商城 + 虚线草地网格 |
+
+### 最终文件树
+
+```
+forest_self/
+├── CMakeLists.txt
+├── .gitignore
+├── CLAUDE.md
+├── Forest_单人敏捷开发计划.md
+├── Forest_Portable.zip       (23.7 MB)
+├── docs/
+│   ├── proposal.md
+│   ├── test_report.md
+│   └── final_report.md
+└── src/
+    ├── main.cpp
+    ├── resources.qrc
+    ├── common/
+    │   ├── DatabaseCommon.h
+    │   └── PathConfig.h
+    ├── storage/
+    │   ├── DatabaseManager.h/.cpp
+    │   ├── PresetManager.h/.cpp
+    │   └── UserManager.h/.cpp
+    ├── plant/    (6 个类, 3 层继承)
+    │   ├── AbstractPlant  →  Tree  →  OakTree / PineTree
+    │   └──                  Flower →  Rose
+    ├── core/
+    │   ├── FocusController.h/.cpp
+    │   ├── CoinManager.h/.cpp
+    │   ├── QuoteProvider.h/.cpp
+    │   ├── StatisticsCalculator.h
+    │   └── AchievementEngine.h/.cpp
+    ├── system/
+    │   ├── RuleEngine.h/.cpp
+    │   └── SystemMonitor.h/.cpp
+    ├── ui/
+    │   ├── MainWindow.h/.cpp
+    │   ├── PlantTimerWidget.h/.cpp
+    │   ├── GardenCanvas.h/.cpp
+    │   ├── SettingsDialog.h/.cpp
+    │   ├── StoreDialog.h/.cpp
+    │   ├── StatisticsDialog.h/.cpp
+    │   ├── LoginDialog.h/.cpp
+    │   ├── GridSelectDialog.h/.cpp
+    │   ├── HistoryWidget.h/.cpp
+    │   ├── TimelineItemWidget.h/.cpp
+    │   └── AchievementToast.h
+    └── utils/
+        └── Logger.h/.cpp
+```

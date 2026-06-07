@@ -28,14 +28,15 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "D:/No.6CollaborationProject/forest_self/src/system/RuleEngine.cpp" "CMakeFiles/Forest.dir/src/system/RuleEngine.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/system/RuleEngine.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/system/SystemMonitor.cpp" "CMakeFiles/Forest.dir/src/system/SystemMonitor.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/system/SystemMonitor.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/GardenCanvas.cpp" "CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.obj.d"
+  "D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.cpp" "CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.cpp" "CMakeFiles/Forest.dir/src/ui/HistoryWidget.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/HistoryWidget.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/LoginDialog.cpp" "CMakeFiles/Forest.dir/src/ui/LoginDialog.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/LoginDialog.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.cpp" "CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.obj.d"
+  "D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.cpp" "CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/SettingsDialog.cpp" "CMakeFiles/Forest.dir/src/ui/SettingsDialog.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/SettingsDialog.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/StatisticsDialog.cpp" "CMakeFiles/Forest.dir/src/ui/StatisticsDialog.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/StatisticsDialog.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/StoreDialog.cpp" "CMakeFiles/Forest.dir/src/ui/StoreDialog.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/StoreDialog.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.cpp" "CMakeFiles/Forest.dir/src/ui/TimelineItemWidget.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/TimelineItemWidget.cpp.obj.d"
-  "D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.cpp" "CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj.d"
   "D:/No.6CollaborationProject/forest_self/src/utils/Logger.cpp" "CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj" "gcc" "CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj.d"
   )
 

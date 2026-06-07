@@ -427,9 +427,11 @@ CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qtextoption.h \
  D:/No.6CollaborationProject/forest_self/src/storage/PresetManager.h \
  D:/No.6CollaborationProject/forest_self/src/common/DatabaseCommon.h \
- D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.h \
+ D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QWidget \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qwidget.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/QString \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qstring.h \
  D:/No.6CollaborationProject/forest_self/src/ui/GardenCanvas.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/QMap \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qmap.h \
@@ -465,14 +467,15 @@ CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QGraphicsOpacityEffect \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qgraphicseffect.h \
  D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.h \
+ D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QGridLayout \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qgridlayout.h \
  D:/No.6CollaborationProject/forest_self/src/core/FocusController.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/QObject \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qobject.h \
  D:/No.6CollaborationProject/forest_self/src/plant/AbstractPlant.h \
  D:/No.6CollaborationProject/forest_self/src/core/CoinManager.h \
  D:/No.6CollaborationProject/forest_self/src/core/QuoteProvider.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/QString \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qstring.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/QVector \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qvector.h \
  D:/No.6CollaborationProject/forest_self/src/core/AchievementEngine.h \

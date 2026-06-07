@@ -28,7 +28,7 @@ add_executable(Forest WIN32
     src/system/RuleEngine.cpp
     src/system/SystemMonitor.cpp
     src/ui/MainWindow.cpp
-    src/ui/TimerRing.cpp
+    src/ui/PlantTimerWidget.cpp
     src/ui/GardenCanvas.cpp
     src/ui/SettingsDialog.cpp
     src/ui/StoreDialog.cpp
@@ -36,6 +36,7 @@ add_executable(Forest WIN32
     src/ui/LoginDialog.cpp
     src/ui/TimelineItemWidget.cpp
     src/ui/HistoryWidget.cpp
+    src/ui/GridSelectDialog.cpp
     src/utils/Logger.cpp
 )
 

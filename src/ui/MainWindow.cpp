@@ -1,10 +1,11 @@
 #include "ui/MainWindow.h"
-#include "ui/TimerRing.h"
+#include "ui/PlantTimerWidget.h"
 #include "ui/GardenCanvas.h"
 #include "ui/StoreDialog.h"
 #include "ui/StatisticsDialog.h"
 #include "ui/AchievementToast.h"
 #include "ui/HistoryWidget.h"
+#include "ui/GridSelectDialog.h"
 #include "core/FocusController.h"
 #include "core/CoinManager.h"
 #include "core/QuoteProvider.h"
@@ -45,7 +46,7 @@ MainWindow::MainWindow(FocusController& controller,
 
     initNavigationLayout();
 
-    timerRing_ = new TimerRing;
+    timerRing_ = new PlantTimerWidget;
     gardenCanvas_ = new GardenCanvas;
 
     // ========== Page 0: 专注主页 ==========
@@ -241,6 +242,13 @@ MainWindow::MainWindow(FocusController& controller,
     tagLayout->addWidget(new QLabel(QStringLiteral("标签:")));
     tagLayout->addWidget(settingsTagCombo_);
     s3Layout->addWidget(tagGroup);
+
+    auto* oathGroup = new QGroupBox(QStringLiteral("树梢誓言"));
+    auto* oathLayout = new QHBoxLayout(oathGroup);
+    settingsOathInput_ = new QLineEdit;
+    settingsOathInput_->setPlaceholderText(QStringLiteral("写下一句专注心愿..."));
+    oathLayout->addWidget(settingsOathInput_);
+    s3Layout->addWidget(oathGroup);
 
     auto* blGroup = new QGroupBox(QStringLiteral("进程黑名单"));
     auto* blLayout = new QVBoxLayout(blGroup);
@@ -476,14 +484,17 @@ void MainWindow::onStartClicked()
     auto fm = settingsFocusModeCombo_->currentData().toUInt() == 1
         ? FocusController::FocusMode::GENTLE_MODE : FocusController::FocusMode::STRICT_MODE;
 
+    uint32_t minutes = timerRing_->selectedMinutes();
     controller_.startFocus(
         static_cast<uint32_t>(settingsPlantCombo_->currentData().toUInt()),
-        static_cast<uint32_t>(settingsMinutesSpin_->value()),
+        minutes,
         mode, fm);
 
+    timerRing_->setPlantType(
+        static_cast<uint32_t>(settingsPlantCombo_->currentData().toUInt()));
     monitor_.startMonitoring();
     quoteTimer_.start(10000);
-    timerRing_->setQuote(quotes_.getRandomQuote());
+    timerRing_->setOath(settingsOathInput_->text());
     switchPage(0);
     updateUI();
 }
@@ -533,6 +544,12 @@ void MainWindow::updateUI()
     pauseBtn_->setEnabled(running || paused);
     abandonBtn_->setEnabled(running || paused);
 
+    if (idle) {
+        timerRing_->setDisplaySeconds(0, false);
+        timerRing_->setOath(QString());
+        timerRing_->setPlantType(settingsPlantCombo_->currentData().toUInt());
+    }
+
     if (controller_.timerMode() == FocusController::TimerMode::STOPWATCH) {
         abandonBtn_->setText(QStringLiteral("完成专注"));
         pauseBtn_->setEnabled(false);
@@ -546,6 +563,18 @@ void MainWindow::updateUI()
         uint32_t coins = controller_.actualSeconds() / 300;
         coinManager_.earn(coins);
         achievements_.checkAndUnlock();
+
+        GridSelectDialog gridDlg(db_, this);
+        if (gridDlg.exec() == QDialog::Accepted) {
+            uint8_t idx = gridDlg.getSelectedGridIndex();
+            auto records = db_.getAllRecords();
+            if (!records.empty()) {
+                auto last = records.back();
+                last.gridIndex = idx;
+                db_.updateById(last.recordId, last);
+            }
+        }
+
         QMessageBox::information(this, QStringLiteral("恭喜！"),
             QStringLiteral("专注完成！获得了 %1 枚金币！").arg(coins));
         monitor_.stopMonitoring(); quoteTimer_.stop(); refreshGarden();

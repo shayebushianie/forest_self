@@ -359,20 +359,20 @@ CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.s"
 	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\No.6CollaborationProject\forest_self\src\ui\MainWindow.cpp -o CMakeFiles\Forest.dir\src\ui\MainWindow.cpp.s
 
-CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj: CMakeFiles/Forest.dir/flags.make
-CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj: CMakeFiles/Forest.dir/includes_CXX.rsp
-CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj: D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.cpp
-CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj: CMakeFiles/Forest.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj"
-	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj -MF CMakeFiles\Forest.dir\src\ui\TimerRing.cpp.obj.d -o CMakeFiles\Forest.dir\src\ui\TimerRing.cpp.obj -c D:\No.6CollaborationProject\forest_self\src\ui\TimerRing.cpp
+CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj: CMakeFiles/Forest.dir/flags.make
+CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj: CMakeFiles/Forest.dir/includes_CXX.rsp
+CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj: D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.cpp
+CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj: CMakeFiles/Forest.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj"
+	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj -MF CMakeFiles\Forest.dir\src\ui\PlantTimerWidget.cpp.obj.d -o CMakeFiles\Forest.dir\src\ui\PlantTimerWidget.cpp.obj -c D:\No.6CollaborationProject\forest_self\src\ui\PlantTimerWidget.cpp
 
-CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.i"
-	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\No.6CollaborationProject\forest_self\src\ui\TimerRing.cpp > CMakeFiles\Forest.dir\src\ui\TimerRing.cpp.i
+CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.i"
+	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\No.6CollaborationProject\forest_self\src\ui\PlantTimerWidget.cpp > CMakeFiles\Forest.dir\src\ui\PlantTimerWidget.cpp.i
 
-CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.s"
-	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\No.6CollaborationProject\forest_self\src\ui\TimerRing.cpp -o CMakeFiles\Forest.dir\src\ui\TimerRing.cpp.s
+CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.s"
+	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\No.6CollaborationProject\forest_self\src\ui\PlantTimerWidget.cpp -o CMakeFiles\Forest.dir\src\ui\PlantTimerWidget.cpp.s
 
 CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.obj: CMakeFiles/Forest.dir/flags.make
 CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.obj: CMakeFiles/Forest.dir/includes_CXX.rsp
@@ -479,11 +479,26 @@ CMakeFiles/Forest.dir/src/ui/HistoryWidget.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Forest.dir/src/ui/HistoryWidget.cpp.s"
 	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\No.6CollaborationProject\forest_self\src\ui\HistoryWidget.cpp -o CMakeFiles\Forest.dir\src\ui\HistoryWidget.cpp.s
 
+CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj: CMakeFiles/Forest.dir/flags.make
+CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj: CMakeFiles/Forest.dir/includes_CXX.rsp
+CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj: D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.cpp
+CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj: CMakeFiles/Forest.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building CXX object CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj"
+	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj -MF CMakeFiles\Forest.dir\src\ui\GridSelectDialog.cpp.obj.d -o CMakeFiles\Forest.dir\src\ui\GridSelectDialog.cpp.obj -c D:\No.6CollaborationProject\forest_self\src\ui\GridSelectDialog.cpp
+
+CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.i"
+	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E D:\No.6CollaborationProject\forest_self\src\ui\GridSelectDialog.cpp > CMakeFiles\Forest.dir\src\ui\GridSelectDialog.cpp.i
+
+CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.s"
+	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S D:\No.6CollaborationProject\forest_self\src\ui\GridSelectDialog.cpp -o CMakeFiles\Forest.dir\src\ui\GridSelectDialog.cpp.s
+
 CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj: CMakeFiles/Forest.dir/flags.make
 CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj: CMakeFiles/Forest.dir/includes_CXX.rsp
 CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj: D:/No.6CollaborationProject/forest_self/src/utils/Logger.cpp
 CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj: CMakeFiles/Forest.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building CXX object CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building CXX object CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj"
 	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj -MF CMakeFiles\Forest.dir\src\utils\Logger.cpp.obj.d -o CMakeFiles\Forest.dir\src\utils\Logger.cpp.obj -c D:\No.6CollaborationProject\forest_self\src\utils\Logger.cpp
 
 CMakeFiles/Forest.dir/src/utils/Logger.cpp.i: cmake_force
@@ -498,7 +513,7 @@ CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj: CMakeFile
 CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj: CMakeFiles/Forest.dir/includes_CXX.rsp
 CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj: Forest_autogen/UVLADIE3JM/qrc_resources.cpp
 CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj: CMakeFiles/Forest.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building CXX object CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building CXX object CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj"
 	C:\Users\24396\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj -MF CMakeFiles\Forest.dir\Forest_autogen\UVLADIE3JM\qrc_resources.cpp.obj.d -o CMakeFiles\Forest.dir\Forest_autogen\UVLADIE3JM\qrc_resources.cpp.obj -c D:\No.6CollaborationProject\forest_self\build\Forest_autogen\UVLADIE3JM\qrc_resources.cpp
 
 CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.i: cmake_force
@@ -529,7 +544,7 @@ Forest_OBJECTS = \
 "CMakeFiles/Forest.dir/src/system/RuleEngine.cpp.obj" \
 "CMakeFiles/Forest.dir/src/system/SystemMonitor.cpp.obj" \
 "CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.obj" \
-"CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj" \
+"CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj" \
 "CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.obj" \
 "CMakeFiles/Forest.dir/src/ui/SettingsDialog.cpp.obj" \
 "CMakeFiles/Forest.dir/src/ui/StoreDialog.cpp.obj" \
@@ -537,6 +552,7 @@ Forest_OBJECTS = \
 "CMakeFiles/Forest.dir/src/ui/LoginDialog.cpp.obj" \
 "CMakeFiles/Forest.dir/src/ui/TimelineItemWidget.cpp.obj" \
 "CMakeFiles/Forest.dir/src/ui/HistoryWidget.cpp.obj" \
+"CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj" \
 "CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj" \
 "CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj"
 
@@ -561,7 +577,7 @@ Forest.exe: CMakeFiles/Forest.dir/src/core/AchievementEngine.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/system/RuleEngine.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/system/SystemMonitor.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.obj
-Forest.exe: CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj
+Forest.exe: CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/SettingsDialog.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/StoreDialog.cpp.obj
@@ -569,6 +585,7 @@ Forest.exe: CMakeFiles/Forest.dir/src/ui/StatisticsDialog.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/LoginDialog.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/TimelineItemWidget.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/ui/HistoryWidget.cpp.obj
+Forest.exe: CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/src/utils/Logger.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/Forest_autogen/UVLADIE3JM/qrc_resources.cpp.obj
 Forest.exe: CMakeFiles/Forest.dir/build.make
@@ -579,7 +596,7 @@ Forest.exe: D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/libQt6
 Forest.exe: CMakeFiles/Forest.dir/linkLibs.rsp
 Forest.exe: CMakeFiles/Forest.dir/objects1.rsp
 Forest.exe: CMakeFiles/Forest.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Linking CXX executable Forest.exe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=D:\No.6CollaborationProject\forest_self\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Linking CXX executable Forest.exe"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\Forest.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

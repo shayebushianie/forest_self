@@ -62,6 +62,7 @@ private:
     uint32_t    remainingSeconds_ = 0;
     uint32_t    actualSeconds_ = 0;
     uint32_t    violationCount_ = 0;
+    uint32_t    violationSeconds_ = 0;
     uint32_t    warningRemainingSeconds_ = 10;
     uint32_t    recordIndex_ = 0;
 

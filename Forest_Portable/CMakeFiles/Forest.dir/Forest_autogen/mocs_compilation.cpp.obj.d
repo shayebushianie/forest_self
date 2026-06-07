@@ -420,6 +420,20 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qmap.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/QPixmap \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qpixmap.h \
+ D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_GridSelectDialog.cpp \
+ D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QDialog \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qdialog.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qwidget.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QGridLayout \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qgridlayout.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qlayout.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qlayoutitem.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qboxlayout.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qgridlayout.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QPushButton \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qpushbutton.h \
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qabstractbutton.h \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_HistoryWidget.cpp \
  D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QListWidget \
@@ -428,7 +442,6 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qabstractitemview.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qabstractscrollarea.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qframe.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qwidget.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qabstractitemmodel.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qitemselectionmodel.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qabstractitemdelegate.h \
@@ -445,8 +458,6 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qrubberband.h \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_LoginDialog.cpp \
  D:/No.6CollaborationProject/forest_self/src/ui/LoginDialog.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QDialog \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qdialog.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QLineEdit \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qlineedit.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qtextcursor.h \
@@ -459,9 +470,6 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qlabel.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qpicture.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/qiodevice.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QPushButton \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qpushbutton.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qabstractbutton.h \
  D:/No.6CollaborationProject/forest_self/src/storage/UserManager.h \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_MainWindow.cpp \
  D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.h \
@@ -471,10 +479,6 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qsystemtrayicon.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QHBoxLayout \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qboxlayout.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qlayout.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qlayoutitem.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qboxlayout.h \
- D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qgridlayout.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QStackedWidget \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qstackedwidget.h \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtCore/QPropertyAnimation \
@@ -487,6 +491,8 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QSpinBox \
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/qspinbox.h \
  D:/No.6CollaborationProject/forest_self/src/storage/PresetManager.h \
+ D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_PlantTimerWidget.cpp \
+ D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.h \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_SettingsDialog.cpp \
  D:/No.6CollaborationProject/forest_self/src/ui/SettingsDialog.h \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_StatisticsDialog.cpp \
@@ -494,6 +500,4 @@ CMakeFiles/Forest.dir/Forest_autogen/mocs_compilation.cpp.obj: \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_StoreDialog.cpp \
  D:/No.6CollaborationProject/forest_self/src/ui/StoreDialog.h \
  D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_TimelineItemWidget.cpp \
- D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.h \
- D:\No.6CollaborationProject\forest_self\build\Forest_autogen\YPKJ5OE7LN/moc_TimerRing.cpp \
- D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.h
+ D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.h

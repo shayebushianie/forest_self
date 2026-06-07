@@ -20,6 +20,7 @@ void FocusController::startFocus(uint32_t plantType, uint32_t minutes,
     focusMode_ = focusMode;
     actualSeconds_ = 0;
     violationCount_ = 0;
+    violationSeconds_ = 0;
     warningRemainingSeconds_ = 10;
 
     plannedMinutes_ = (timerMode == TimerMode::STOPWATCH) ? 0 : minutes;
@@ -42,39 +43,26 @@ void FocusController::startFocus(uint32_t plantType, uint32_t minutes,
 
     currentState_ = State::RUNNING;
     emit sig_stateChanged(currentState_);
-
-    const char* modeNames[] = {"STRICT","GENTLE"};
-    std::cout << "[FocusController] Focus started: "
-              << currentPlant_->getPlantName()
-              << " [" << modeNames[static_cast<int>(focusMode_)] << "]"
-              << (timerMode == TimerMode::STOPWATCH ? " [STOPWATCH]" : "")
-              << "\n";
 }
 
-void FocusController::pauseFocus()
-{
+void FocusController::pauseFocus() {
     if (currentState_ != State::RUNNING) return;
-    currentState_ = State::PAUSED;
-    emit sig_stateChanged(currentState_);
+    currentState_ = State::PAUSED; emit sig_stateChanged(currentState_);
 }
 
-void FocusController::resumeFocus()
-{
+void FocusController::resumeFocus() {
     if (currentState_ != State::PAUSED) return;
-    currentState_ = State::RUNNING;
-    emit sig_stateChanged(currentState_);
+    currentState_ = State::RUNNING; emit sig_stateChanged(currentState_);
 }
 
-void FocusController::abandonFocus()
-{
+void FocusController::abandonFocus() {
     if (currentState_ != State::RUNNING && currentState_ != State::PAUSED
         && currentState_ != State::WARNING) return;
     if (currentPlant_) currentPlant_->wither();
     writeRecord(2);
 }
 
-void FocusController::completeFocus()
-{
+void FocusController::completeFocus() {
     if (currentState_ != State::RUNNING) return;
     if (currentMode_ != TimerMode::STOPWATCH) return;
     if (actualSeconds_ < 600) { handleFailure(); }
@@ -129,6 +117,10 @@ void FocusController::tick()
         if (actualSeconds_ >= 7200) { handleSuccess(); }
     }
 
+    if (focusMode_ == FocusMode::GENTLE_MODE && violationCount_ > 0) {
+        ++violationSeconds_;
+    }
+
     updateGrowth();
 }
 
@@ -145,7 +137,9 @@ void FocusController::handleSuccess()
 {
     writeRecord(0);
     uint32_t coins = calculateCoins();
-    std::cout << "[FocusController] Success! Coins earned: " << coins << "\n";
+    std::cout << "[FocusController] Success! Pure seconds="
+              << (actualSeconds_ > violationSeconds_ ? actualSeconds_ - violationSeconds_ : 0)
+              << " coins=" << coins << "\n";
 }
 
 void FocusController::handleFailure()
@@ -159,11 +153,14 @@ void FocusController::writeRecord(uint32_t status)
     currentState_ = (status == 0) ? State::SUCCESS : State::FAILED;
     emit sig_stateChanged(currentState_);
 
+    uint32_t pureSeconds = (actualSeconds_ > violationSeconds_)
+        ? actualSeconds_ - violationSeconds_ : 0;
+
     FocusRecord record;
     record.recordId = recordIndex_;
     record.plantType = currentPlant_ ? currentPlant_->getPlantType() : 0;
     record.plannedMinutes = plannedMinutes_;
-    record.actualSeconds = actualSeconds_;
+    record.actualSeconds = pureSeconds;
     record.status = status;
     record.violationCount = violationCount_;
     record.growthStage = currentPlant_ ? currentPlant_->getGrowthStage() : 4;
@@ -175,9 +172,15 @@ void FocusController::writeRecord(uint32_t status)
 
 uint32_t FocusController::calculateCoins() const
 {
-    uint32_t coins = actualSeconds_ / 300;
-    if (focusMode_ == FocusMode::GENTLE_MODE && violationCount_ > 0) {
-        coins /= 2;
+    uint32_t rawCoins = actualSeconds_ / 300;
+
+    if (focusMode_ == FocusMode::GENTLE_MODE) {
+        double multiplier = 1.0;
+        if (violationCount_ == 0)       multiplier = 1.0;
+        else if (violationCount_ <= 3)  multiplier = 0.8;
+        else if (violationCount_ <= 10) multiplier = 0.5;
+        else                            multiplier = 0.2;
+        return static_cast<uint32_t>(rawCoins * multiplier);
     }
-    return coins;
+    return rawCoins;
 }

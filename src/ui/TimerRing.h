@@ -11,6 +11,7 @@ public:
 
     void setDisplaySeconds(uint32_t seconds, bool isStopwatch);
     void setQuote(const QString& quote);
+    void setOath(const QString& oath);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -19,6 +20,7 @@ private:
     uint32_t displaySeconds_ = 0;
     bool isStopwatch_ = false;
     QString quote_;
+    QString oath_;
 };
 
 #endif // TIMERRING_H

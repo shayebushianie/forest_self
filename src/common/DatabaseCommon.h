@@ -26,7 +26,8 @@ struct FocusRecord {
     uint32_t coinsEarned;     // 36-39 本次获得金币数
     uint32_t tagId;           // 40-43 标签：0=无, 1=学习, 2=写代码, 3=阅读, 4=运动
     uint8_t  focusMode;       // 44    专注模式：0=严格, 1=温和
-    char     reserved[19];    // 45-63 对齐填充，确保总计 64 字节
+    uint8_t  gridIndex;       // 45    网格种植位置 (0-63)
+    char     reserved[18];    // 46-63 对齐填充，确保总计 64 字节
 
     /// @brief 默认构造函数：清零所有字段，防止脏数据写入磁盘
     FocusRecord()

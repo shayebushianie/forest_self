@@ -436,6 +436,7 @@ D:/No.6CollaborationProject/forest_self/build/Forest_autogen/timestamp
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qwindowdefs_win.h
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QComboBox
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QDialog
+ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QGridLayout
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QHBoxLayout
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QLabel
  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QLineEdit
@@ -652,12 +653,16 @@ D:/No.6CollaborationProject/forest_self/build/Forest_autogen/timestamp
  D:/No.6CollaborationProject/forest_self/src/system/SystemMonitor.h
  D:/No.6CollaborationProject/forest_self/src/ui/GardenCanvas.cpp
  D:/No.6CollaborationProject/forest_self/src/ui/GardenCanvas.h
+ D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.cpp
+ D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.h
  D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.cpp
  D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.h
  D:/No.6CollaborationProject/forest_self/src/ui/LoginDialog.cpp
  D:/No.6CollaborationProject/forest_self/src/ui/LoginDialog.h
  D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.cpp
  D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.h
+ D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.cpp
+ D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.h
  D:/No.6CollaborationProject/forest_self/src/ui/SettingsDialog.cpp
  D:/No.6CollaborationProject/forest_self/src/ui/SettingsDialog.h
  D:/No.6CollaborationProject/forest_self/src/ui/StatisticsDialog.cpp
@@ -666,8 +671,6 @@ D:/No.6CollaborationProject/forest_self/build/Forest_autogen/timestamp
  D:/No.6CollaborationProject/forest_self/src/ui/StoreDialog.h
  D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.cpp
  D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.h
- D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.cpp
- D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.h
  D:/No.6CollaborationProject/forest_self/src/utils/Logger.cpp
  D:/No.6CollaborationProject/forest_self/src/utils/Logger.h
 

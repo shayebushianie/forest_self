@@ -610,6 +610,30 @@ src/ui/GardenCanvas.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/GardenCanvas.cpp.s
 .PHONY : src/ui/GardenCanvas.cpp.s
 
+src/ui/GridSelectDialog.obj: src/ui/GridSelectDialog.cpp.obj
+.PHONY : src/ui/GridSelectDialog.obj
+
+# target to build an object file
+src/ui/GridSelectDialog.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.obj
+.PHONY : src/ui/GridSelectDialog.cpp.obj
+
+src/ui/GridSelectDialog.i: src/ui/GridSelectDialog.cpp.i
+.PHONY : src/ui/GridSelectDialog.i
+
+# target to preprocess a source file
+src/ui/GridSelectDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.i
+.PHONY : src/ui/GridSelectDialog.cpp.i
+
+src/ui/GridSelectDialog.s: src/ui/GridSelectDialog.cpp.s
+.PHONY : src/ui/GridSelectDialog.s
+
+# target to generate assembly for a file
+src/ui/GridSelectDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/GridSelectDialog.cpp.s
+.PHONY : src/ui/GridSelectDialog.cpp.s
+
 src/ui/HistoryWidget.obj: src/ui/HistoryWidget.cpp.obj
 .PHONY : src/ui/HistoryWidget.obj
 
@@ -681,6 +705,30 @@ src/ui/MainWindow.s: src/ui/MainWindow.cpp.s
 src/ui/MainWindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/MainWindow.cpp.s
 .PHONY : src/ui/MainWindow.cpp.s
+
+src/ui/PlantTimerWidget.obj: src/ui/PlantTimerWidget.cpp.obj
+.PHONY : src/ui/PlantTimerWidget.obj
+
+# target to build an object file
+src/ui/PlantTimerWidget.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.obj
+.PHONY : src/ui/PlantTimerWidget.cpp.obj
+
+src/ui/PlantTimerWidget.i: src/ui/PlantTimerWidget.cpp.i
+.PHONY : src/ui/PlantTimerWidget.i
+
+# target to preprocess a source file
+src/ui/PlantTimerWidget.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.i
+.PHONY : src/ui/PlantTimerWidget.cpp.i
+
+src/ui/PlantTimerWidget.s: src/ui/PlantTimerWidget.cpp.s
+.PHONY : src/ui/PlantTimerWidget.s
+
+# target to generate assembly for a file
+src/ui/PlantTimerWidget.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/PlantTimerWidget.cpp.s
+.PHONY : src/ui/PlantTimerWidget.cpp.s
 
 src/ui/SettingsDialog.obj: src/ui/SettingsDialog.cpp.obj
 .PHONY : src/ui/SettingsDialog.obj
@@ -778,30 +826,6 @@ src/ui/TimelineItemWidget.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/TimelineItemWidget.cpp.s
 .PHONY : src/ui/TimelineItemWidget.cpp.s
 
-src/ui/TimerRing.obj: src/ui/TimerRing.cpp.obj
-.PHONY : src/ui/TimerRing.obj
-
-# target to build an object file
-src/ui/TimerRing.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.obj
-.PHONY : src/ui/TimerRing.cpp.obj
-
-src/ui/TimerRing.i: src/ui/TimerRing.cpp.i
-.PHONY : src/ui/TimerRing.i
-
-# target to preprocess a source file
-src/ui/TimerRing.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.i
-.PHONY : src/ui/TimerRing.cpp.i
-
-src/ui/TimerRing.s: src/ui/TimerRing.cpp.s
-.PHONY : src/ui/TimerRing.s
-
-# target to generate assembly for a file
-src/ui/TimerRing.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Forest.dir\build.make CMakeFiles/Forest.dir/src/ui/TimerRing.cpp.s
-.PHONY : src/ui/TimerRing.cpp.s
-
 src/utils/Logger.obj: src/utils/Logger.cpp.obj
 .PHONY : src/utils/Logger.obj
 
@@ -894,6 +918,9 @@ help:
 	@echo ... src/ui/GardenCanvas.obj
 	@echo ... src/ui/GardenCanvas.i
 	@echo ... src/ui/GardenCanvas.s
+	@echo ... src/ui/GridSelectDialog.obj
+	@echo ... src/ui/GridSelectDialog.i
+	@echo ... src/ui/GridSelectDialog.s
 	@echo ... src/ui/HistoryWidget.obj
 	@echo ... src/ui/HistoryWidget.i
 	@echo ... src/ui/HistoryWidget.s
@@ -903,6 +930,9 @@ help:
 	@echo ... src/ui/MainWindow.obj
 	@echo ... src/ui/MainWindow.i
 	@echo ... src/ui/MainWindow.s
+	@echo ... src/ui/PlantTimerWidget.obj
+	@echo ... src/ui/PlantTimerWidget.i
+	@echo ... src/ui/PlantTimerWidget.s
 	@echo ... src/ui/SettingsDialog.obj
 	@echo ... src/ui/SettingsDialog.i
 	@echo ... src/ui/SettingsDialog.s
@@ -915,9 +945,6 @@ help:
 	@echo ... src/ui/TimelineItemWidget.obj
 	@echo ... src/ui/TimelineItemWidget.i
 	@echo ... src/ui/TimelineItemWidget.s
-	@echo ... src/ui/TimerRing.obj
-	@echo ... src/ui/TimerRing.i
-	@echo ... src/ui/TimerRing.s
 	@echo ... src/utils/Logger.obj
 	@echo ... src/utils/Logger.i
 	@echo ... src/utils/Logger.s

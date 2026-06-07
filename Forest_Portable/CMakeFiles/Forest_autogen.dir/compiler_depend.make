@@ -435,6 +435,7 @@ Forest_autogen/timestamp: C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages
   D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qwindowdefs_win.h \
   D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QComboBox \
   D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QDialog \
+  D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QGridLayout \
   D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QHBoxLayout \
   D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QLabel \
   D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QLineEdit \
@@ -651,12 +652,16 @@ Forest_autogen/timestamp: C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages
   D:/No.6CollaborationProject/forest_self/src/system/SystemMonitor.h \
   D:/No.6CollaborationProject/forest_self/src/ui/GardenCanvas.cpp \
   D:/No.6CollaborationProject/forest_self/src/ui/GardenCanvas.h \
+  D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.cpp \
+  D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.h \
   D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.cpp \
   D:/No.6CollaborationProject/forest_self/src/ui/HistoryWidget.h \
   D:/No.6CollaborationProject/forest_self/src/ui/LoginDialog.cpp \
   D:/No.6CollaborationProject/forest_self/src/ui/LoginDialog.h \
   D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.cpp \
   D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.h \
+  D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.cpp \
+  D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.h \
   D:/No.6CollaborationProject/forest_self/src/ui/SettingsDialog.cpp \
   D:/No.6CollaborationProject/forest_self/src/ui/SettingsDialog.h \
   D:/No.6CollaborationProject/forest_self/src/ui/StatisticsDialog.cpp \
@@ -665,8 +670,6 @@ Forest_autogen/timestamp: C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages
   D:/No.6CollaborationProject/forest_self/src/ui/StoreDialog.h \
   D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.cpp \
   D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.h \
-  D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.cpp \
-  D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.h \
   D:/No.6CollaborationProject/forest_self/src/utils/Logger.cpp \
   D:/No.6CollaborationProject/forest_self/src/utils/Logger.h
 
@@ -674,10 +677,6 @@ Forest_autogen/timestamp: C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages
 D:/No.6CollaborationProject/forest_self/src/utils/Logger.h:
 
 D:/No.6CollaborationProject/forest_self/src/utils/Logger.cpp:
-
-D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.h:
-
-D:/No.6CollaborationProject/forest_self/src/ui/TimerRing.cpp:
 
 D:/No.6CollaborationProject/forest_self/src/ui/TimelineItemWidget.h:
 
@@ -690,6 +689,10 @@ D:/No.6CollaborationProject/forest_self/src/ui/StoreDialog.cpp:
 D:/No.6CollaborationProject/forest_self/src/ui/StatisticsDialog.h:
 
 D:/No.6CollaborationProject/forest_self/src/ui/StatisticsDialog.cpp:
+
+D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.h:
+
+D:/No.6CollaborationProject/forest_self/src/ui/PlantTimerWidget.cpp:
 
 D:/No.6CollaborationProject/forest_self/src/ui/MainWindow.h:
 
@@ -824,6 +827,10 @@ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QM
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QJpegPluginConfig.cmake:
 
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginTargets-relwithdebinfo.cmake:
+
+D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgPluginAdditionalTargetInfo.cmake:
+
+D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginConfig.cmake:
 
 C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/x86_64-w64-mingw32/include/sec_api/stdio_s.h:
 
@@ -1299,6 +1306,8 @@ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qtextcur
 
 C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/include/c++/16.1.0/x86_64-w64-mingw32/bits/error_constants.h:
 
+D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.cpp:
+
 C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/x86_64-w64-mingw32/include/process.h:
 
 C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/include/c++/16.1.0/cmath:
@@ -1322,6 +1331,8 @@ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6/Qt6Confi
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QMinimalIntegrationPluginTargets.cmake:
 
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6/Qt6Targets.cmake:
+
+D:/No.6CollaborationProject/forest_self/src/ui/GridSelectDialog.h:
 
 C:/Users/24396/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/include/c++/16.1.0/cstdlib:
 
@@ -1849,6 +1860,8 @@ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtGui/qwindowd
 
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QComboBox:
 
+D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QGridLayout:
+
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QHBoxLayout:
 
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/include/QtWidgets/QLabel:
@@ -2002,7 +2015,3 @@ D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QG
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6EntryPointPrivate/Qt6EntryPointMinGW32Target.cmake:
 
 D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QGifPluginConfig.cmake:
-
-D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QSvgPluginAdditionalTargetInfo.cmake:
-
-D:/No.6CollaborationProject/forest_self/Qt/6.5.3/mingw_64/lib/cmake/Qt6Gui/Qt6QICOPluginConfig.cmake:
