@@ -122,6 +122,21 @@ function New-InstallerStage([string]$portablePath, [string]$stagePath) {
     Assert-InstallerStage $stagePath
 }
 
+function Resolve-NsisCompiler {
+    $candidates = @(
+        $NsisCompiler,
+        $env:NSIS_COMPILER,
+        (Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'),
+        (Join-Path $env:ProgramFiles 'NSIS\makensis.exe')
+    ) | Where-Object { $_ } | Select-Object -Unique
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+    throw 'makensis.exe not found. Pass -NsisCompiler, set NSIS_COMPILER, or install NSIS.'
+}
+
 $buildPath = Resolve-ArtifactPath $BuildDir 'Build directory'
 $portablePath = Resolve-ArtifactPath $PortableDir 'Portable input directory'
 $stagePath = Resolve-ArtifactPath $StageDir 'Installer stage directory'
@@ -133,10 +148,44 @@ if (Test-PathsOverlap $portablePath $stagePath) {
     throw 'Portable input directory and installer stage directory must not overlap.'
 }
 
+if (-not $StageOnly) {
+    $portableScript = Join-Path $PSScriptRoot 'package_portable.ps1'
+    $portableArgs = @('-BuildDir', $BuildDir)
+    if ($NoBuild) {
+        $portableArgs += '-NoBuild'
+    }
+    & $portableScript @portableArgs
+    if (-not $?) {
+        throw 'Portable package creation failed.'
+    }
+
+    $portableArchive = Join-Path $repoRoot 'artifacts\forest_portable.zip'
+    if (-not (Test-Path -LiteralPath $portableArchive)) {
+        throw "Portable package did not create $portableArchive"
+    }
+    Get-FileHash -LiteralPath $portableArchive -Algorithm SHA256 |
+        ForEach-Object { "{0} *forest_portable.zip" -f $_.Hash } |
+        Set-Content -LiteralPath (Join-Path $repoRoot 'artifacts\forest_portable.sha256') -Encoding ascii
+}
+
 New-InstallerStage $portablePath $stagePath
 
 if ($StageOnly) {
     Write-Host "Installer stage created: $stagePath"
 } else {
-    throw 'NSIS packaging is not implemented. Use -StageOnly for installer-stage validation.'
+    $releaseDir = Join-Path $repoRoot 'release'
+    New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+    $nsis = Resolve-NsisCompiler
+    $script = Join-Path $repoRoot 'installer\forest_installer.nsi'
+    & $nsis "/DSTAGE_DIR=$stagePath" "/DOUTPUT_DIR=$releaseDir" $script
+    if ($LASTEXITCODE -ne 0) {
+        throw "NSIS build failed with exit code $LASTEXITCODE."
+    }
+    $installer = Join-Path $releaseDir 'ForestFocus_Setup.exe'
+    if (-not (Test-Path -LiteralPath $installer)) {
+        throw "NSIS did not create $installer"
+    }
+    Get-FileHash -LiteralPath $installer -Algorithm SHA256 |
+        ForEach-Object { "{0} *ForestFocus_Setup.exe" -f $_.Hash } |
+        Set-Content -LiteralPath (Join-Path $repoRoot 'artifacts\ForestFocus_Setup.sha256') -Encoding ascii
 }

@@ -67,10 +67,18 @@ $forbidden = @(
 )
 
 function Invoke-PackageExpectingReparseRejection([string]$name, [string]$portablePath, [string]$stagePath) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $packageScript -PortableDir $portablePath -StageDir $stagePath -StageOnly
+    Invoke-PackageStageOnly $portablePath $stagePath
     if ($LASTEXITCODE -eq 0) {
         throw "$name reparse point was accepted."
     }
+}
+
+function Invoke-PackageStageOnly([string]$portablePath, [string]$stagePath) {
+    $escapedScript = $packageScript.Replace("'", "''")
+    $escapedPortablePath = $portablePath.Replace("'", "''")
+    $escapedStagePath = $stagePath.Replace("'", "''")
+    $command = "& { `$ErrorActionPreference = 'Stop'; try { & '$escapedScript' -PortableDir '$escapedPortablePath' -StageDir '$escapedStagePath' -StageOnly; exit 0 } catch { exit 1 } }"
+    & powershell -NoProfile -ExecutionPolicy Bypass -Command $command
 }
 
 function Test-PackageReparseGuards {
@@ -133,6 +141,12 @@ try {
     }
 
     Test-PackageReparseGuards
+
+    Remove-Item -LiteralPath (Join-Path $portableRoot 'sqldrivers\qsqlite.dll') -Force
+    Invoke-PackageStageOnly $portableRoot $stageRoot 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        throw 'Stage-only command accepted input without qsqlite.dll.'
+    }
 } finally {
     Resolve-SafeArtifactPath $fixtureRoot 'Self-test fixture' -Recurse | Out-Null
     if (Test-Path -LiteralPath $fixtureRoot) {
