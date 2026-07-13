@@ -35,6 +35,79 @@ function Assert-Smoke([bool]$Condition, [string]$Message) {
     Write-SmokeLog "PASS: $Message"
 }
 
+function Test-ReparsePoint([IO.FileSystemInfo]$Item) {
+    return (($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+}
+
+function Find-ReparsePoint([string]$Path) {
+    $rootItem = Get-Item -LiteralPath $Path -Force
+    if (Test-ReparsePoint $rootItem) {
+        return $rootItem.FullName
+    }
+    if (-not $rootItem.PSIsContainer) {
+        return $null
+    }
+
+    $directories = [Collections.Generic.Stack[string]]::new()
+    $directories.Push($rootItem.FullName)
+    while ($directories.Count -gt 0) {
+        $directory = $directories.Pop()
+        foreach ($child in Get-ChildItem -LiteralPath $directory -Force) {
+            if (Test-ReparsePoint $child) {
+                return $child.FullName
+            }
+            if ($child.PSIsContainer) {
+                $directories.Push($child.FullName)
+            }
+        }
+    }
+
+    return $null
+}
+
+function Assert-SafeTemporaryInstallPath([string]$Path) {
+    $resolvedPath = [IO.Path]::GetFullPath($Path)
+    if (-not $resolvedPath.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing cleanup outside the temporary root: $resolvedPath"
+    }
+    if (-not (Test-Path -LiteralPath $resolvedPath)) {
+        return $resolvedPath
+    }
+
+    $reparsePoint = Find-ReparsePoint $resolvedPath
+    if ($reparsePoint) {
+        throw "Refusing cleanup because InstallDir contains a reparse point: $reparsePoint"
+    }
+
+    return $resolvedPath
+}
+
+function Remove-NonTraversingPath([string]$Path) {
+    $item = Get-Item -LiteralPath $Path -Force
+    if (Test-ReparsePoint $item) {
+        throw "Refusing to delete reparse point: $($item.FullName)"
+    }
+    if (-not $item.PSIsContainer) {
+        Remove-Item -LiteralPath $item.FullName -Force
+        return
+    }
+
+    foreach ($child in Get-ChildItem -LiteralPath $item.FullName -Force) {
+        Remove-NonTraversingPath $child.FullName
+    }
+    Remove-Item -LiteralPath $item.FullName -Force
+}
+
+function Remove-ValidatedTemporaryInstallDirectory([string]$Path) {
+    $cleanupPath = Assert-SafeTemporaryInstallPath $Path
+    if (-not (Test-Path -LiteralPath $cleanupPath)) {
+        return
+    }
+
+    Remove-NonTraversingPath $cleanupPath
+    Write-SmokeLog "CLEANUP: Removed temporary installation directory: $cleanupPath"
+}
+
 $installerPath = Resolve-AbsolutePath $Installer
 $installPath = Resolve-AbsolutePath $InstallDir
 $logPath = Resolve-AbsolutePath $LogPath
@@ -50,6 +123,8 @@ $sentinelPath = $null
 $installerStarted = $false
 $appProcess = $null
 $succeeded = $false
+$primaryFailure = $null
+$cleanupFailure = $null
 
 try {
     Assert-Smoke (Test-Path -LiteralPath $installerPath -PathType Leaf) "Installer exists: $installerPath"
@@ -115,29 +190,42 @@ try {
     $succeeded = $true
 }
 catch {
-    Write-SmokeLog "FINAL: FAIL: $($_.Exception.Message)"
-    throw
+    $primaryFailure = $_.Exception
 }
 finally {
-    if ($appProcess -and -not $appProcess.HasExited) {
-        Stop-Process -InputObject $appProcess -ErrorAction Stop
-        $appProcess.WaitForExit(10000) | Out-Null
-        Write-SmokeLog "CLEANUP: Stopped the application process started by this smoke test (PID $($appProcess.Id))"
-    }
-
-    if ($installerStarted -and (Test-Path -LiteralPath $installPath)) {
-        $cleanupPath = [IO.Path]::GetFullPath($installPath)
-        if (-not $cleanupPath.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
-            Write-SmokeLog "FINAL: FAIL: Refusing cleanup outside the temporary root: $cleanupPath"
-            throw "Refusing cleanup outside the temporary root: $cleanupPath"
+    try {
+        if ($appProcess -and -not $appProcess.HasExited) {
+            Stop-Process -InputObject $appProcess -ErrorAction Stop
+            if (-not $appProcess.WaitForExit(10000)) {
+                throw "Application process did not stop during cleanup (PID $($appProcess.Id))"
+            }
+            Write-SmokeLog "CLEANUP: Stopped the application process started by this smoke test (PID $($appProcess.Id))"
         }
 
-        Remove-Item -LiteralPath $cleanupPath -Recurse -Force
-        Write-SmokeLog "CLEANUP: Removed temporary installation directory: $cleanupPath"
+        if ($installerStarted -and (Test-Path -LiteralPath $installPath)) {
+            Remove-ValidatedTemporaryInstallDirectory $installPath
+        }
+    }
+    catch {
+        $cleanupFailure = $_.Exception
     }
 }
 
-if ($succeeded) {
-    Write-SmokeLog 'FINAL: PASS: install, startup, forbidden-content, and uninstall assertions passed'
-    exit 0
+if ($primaryFailure -or $cleanupFailure) {
+    $failureMessages = @()
+    if ($primaryFailure) {
+        $failureMessages += $primaryFailure.Message
+    }
+    if ($cleanupFailure) {
+        $failureMessages += "Cleanup failure: $($cleanupFailure.Message)"
+    }
+    Write-SmokeLog ("FINAL: FAIL: " + ($failureMessages -join ' | '))
+    if ($primaryFailure) {
+        throw $primaryFailure
+    }
+    throw $cleanupFailure
 }
+
+Assert-Smoke $succeeded 'Install, startup, forbidden-content, and uninstall assertions passed'
+Write-SmokeLog 'FINAL: PASS: install, startup, forbidden-content, and uninstall assertions passed'
+exit 0

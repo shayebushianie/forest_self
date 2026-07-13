@@ -37,3 +37,35 @@ run in an environment that has produced the installer.
 
 The failure log in `artifacts/installer-smoke.log` is expected evidence from the
 safe-failure test and is ignored by Git.
+
+## Review correction (reparse-point cleanup)
+
+The cleanup path is now protected by more than a lexical temporary-root check.
+Immediately before filesystem cleanup, the smoke script rejects an `InstallDir`
+that is itself a reparse point or contains any reparse-point descendant. Its
+cleanup walks ordinary directories explicitly and never uses recursive
+`Remove-Item`, so it does not traverse a junction that appears in the install
+tree.
+
+Exception handling now records the primary smoke failure and any cleanup or
+`Stop-Process` failure, then writes a combined `FINAL: FAIL` record after the
+`finally` block and before rethrowing.
+
+Added `scripts/installer_smoketest_selftest.ps1`. Where junctions are supported,
+it runs a fake installer that creates an `InstallDir\escape` junction to an
+external temporary fixture. The test confirms the smoke script refuses cleanup,
+records that refusal in `FINAL: FAIL`, leaves the external sentinel intact, and
+leaves the junction-bearing install directory for the fixture's own safe
+teardown. It prints `SKIP` and exits successfully if junction fixtures are not
+supported.
+
+Fresh validation after the correction:
+
+- Both PowerShell scripts parse without errors.
+- The external `C:\ForestFocus` rejection still returns non-zero before an
+  installer starts.
+- The junction fixture passed on this machine and logged the reparse-point
+  cleanup refusal as `FINAL: FAIL`.
+- Static checks confirmed no recursive `Remove-Item`, no protected user-data
+  cleanup target, and the reparse/combined-final-failure guards.
+- `git diff --check` completed successfully.
