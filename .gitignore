@@ -11,6 +11,7 @@
 /forest_portable/
 /focus_forest_portable/
 /artifacts/
+/release/
 /.worktrees/
 
 # 本地生成的运行时数据文件
