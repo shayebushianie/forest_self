@@ -148,6 +148,11 @@ if (Test-PathsOverlap $portablePath $stagePath) {
     throw 'Portable input directory and installer stage directory must not overlap.'
 }
 
+$defaultPortablePath = Resolve-ArtifactPath 'artifacts/forest_portable' 'Default portable input directory'
+if (-not $StageOnly -and -not $portablePath.Equals($defaultPortablePath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Non-stage packaging requires PortableDir artifacts/forest_portable.'
+}
+
 if (-not $StageOnly) {
     $portableScript = Join-Path $PSScriptRoot 'package_portable.ps1'
     $portableArgs = @('-BuildDir', $BuildDir)

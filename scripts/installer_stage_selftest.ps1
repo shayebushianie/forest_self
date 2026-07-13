@@ -67,17 +67,29 @@ $forbidden = @(
 )
 
 function Invoke-PackageExpectingReparseRejection([string]$name, [string]$portablePath, [string]$stagePath) {
-    Invoke-PackageStageOnly $portablePath $stagePath
+    Invoke-PackageCommand $portablePath $stagePath -StageOnly
     if ($LASTEXITCODE -eq 0) {
         throw "$name reparse point was accepted."
     }
 }
 
-function Invoke-PackageStageOnly([string]$portablePath, [string]$stagePath) {
+function Invoke-PackageCommand(
+    [string]$portablePath,
+    [string]$stagePath,
+    [switch]$StageOnly,
+    [switch]$NoBuild
+) {
     $escapedScript = $packageScript.Replace("'", "''")
     $escapedPortablePath = $portablePath.Replace("'", "''")
     $escapedStagePath = $stagePath.Replace("'", "''")
-    $command = "& { `$ErrorActionPreference = 'Stop'; try { & '$escapedScript' -PortableDir '$escapedPortablePath' -StageDir '$escapedStagePath' -StageOnly; exit 0 } catch { exit 1 } }"
+    $arguments = @()
+    if ($StageOnly) {
+        $arguments += '-StageOnly'
+    }
+    if ($NoBuild) {
+        $arguments += '-NoBuild'
+    }
+    $command = "& { `$ErrorActionPreference = 'Stop'; try { & '$escapedScript' -PortableDir '$escapedPortablePath' -StageDir '$escapedStagePath' $($arguments -join ' '); exit 0 } catch { Write-Output `$_.Exception.Message; exit 1 } }"
     & powershell -NoProfile -ExecutionPolicy Bypass -Command $command
 }
 
@@ -143,9 +155,18 @@ try {
     Test-PackageReparseGuards
 
     Remove-Item -LiteralPath (Join-Path $portableRoot 'sqldrivers\qsqlite.dll') -Force
-    Invoke-PackageStageOnly $portableRoot $stageRoot 2>$null
+    Invoke-PackageCommand $portableRoot $stageRoot -StageOnly 2>$null
     if ($LASTEXITCODE -eq 0) {
         throw 'Stage-only command accepted input without qsqlite.dll.'
+    }
+
+    $nonDefaultPortable = Join-Path $fixtureRoot 'different-portable'
+    $nonDefaultOutput = Invoke-PackageCommand $nonDefaultPortable $stageRoot -NoBuild 2>&1 | Out-String
+    if ($LASTEXITCODE -eq 0) {
+        throw 'Non-stage package command accepted a non-default portable directory.'
+    }
+    if ($nonDefaultOutput -notmatch [regex]::Escape('Non-stage packaging requires PortableDir artifacts/forest_portable.')) {
+        throw 'Non-stage package command did not reject the non-default portable directory before portable packaging.'
     }
 } finally {
     Resolve-SafeArtifactPath $fixtureRoot 'Self-test fixture' -Recurse | Out-Null
