@@ -38,7 +38,19 @@ function Resolve-ArtifactPath([string]$path, [string]$description) {
     return $resolvedPath
 }
 
-function Assert-NoReparsePoints([string]$path, [string]$description) {
+function Assert-NoReparsePointsBelow([string]$path, [string]$description) {
+    foreach ($item in Get-ChildItem -LiteralPath $path -Force) {
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "$description must not contain a reparse point: $($item.FullName)"
+        }
+
+        if ($item.PSIsContainer) {
+            Assert-NoReparsePointsBelow $item.FullName $description
+        }
+    }
+}
+
+function Assert-NoReparsePoints([string]$path, [string]$description, [switch]$Recurse) {
     $currentPath = $artifactsRoot
     if (Test-Path -LiteralPath $currentPath) {
         $rootItem = Get-Item -LiteralPath $currentPath -Force
@@ -58,6 +70,10 @@ function Assert-NoReparsePoints([string]$path, [string]$description) {
         if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
             throw "$description must not contain a reparse point: $currentPath"
         }
+    }
+
+    if ($Recurse -and (Test-Path -LiteralPath $path)) {
+        Assert-NoReparsePointsBelow $path $description
     }
 }
 
@@ -110,8 +126,8 @@ $buildPath = Resolve-ArtifactPath $BuildDir 'Build directory'
 $portablePath = Resolve-ArtifactPath $PortableDir 'Portable input directory'
 $stagePath = Resolve-ArtifactPath $StageDir 'Installer stage directory'
 Assert-NoReparsePoints $buildPath 'Build directory'
-Assert-NoReparsePoints $portablePath 'Portable input directory'
-Assert-NoReparsePoints $stagePath 'Installer stage directory'
+Assert-NoReparsePoints $portablePath 'Portable input directory' -Recurse
+Assert-NoReparsePoints $stagePath 'Installer stage directory' -Recurse
 
 if (Test-PathsOverlap $portablePath $stagePath) {
     throw 'Portable input directory and installer stage directory must not overlap.'
