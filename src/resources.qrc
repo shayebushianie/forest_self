@@ -1,0 +1,34 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/oak.png</file>
+        <file>images/pine.png</file>
+        <file>images/rose.png</file>
+        <file>images/withered.png</file>
+        <file>images/coin.png</file>
+        <file>images/seedplanted.png</file>
+        <file>images/oak_initial.png</file>
+        <file>images/oak_middle.png</file>
+        <file>images/oak_final.png</file>
+        <file>images/oak_withered.png</file>
+        <file>images/pine_initial.png</file>
+        <file>images/pine_middle.png</file>
+        <file>images/pine_final.png</file>
+        <file>images/pine_withered.png</file>
+        <file>images/rose_initial.png</file>
+        <file>images/rose_middle.png</file>
+        <file>images/rose_final.png</file>
+        <file>images/rose_withered.png</file>
+        <file>images/ginkgo_initial.png</file>
+        <file>images/ginkgo_middle.png</file>
+        <file>images/ginkgo_final.png</file>
+        <file>images/ginkgo_withered.png</file>
+        <file>images/sunflower_initial.png</file>
+        <file>images/sunflower_middle.png</file>
+        <file>images/sunflower_final.png</file>
+        <file>images/sunflower_withered.png</file>
+        <file>images/cactus_initial.png</file>
+        <file>images/cactus_middle.png</file>
+        <file>images/cactus_final.png</file>
+        <file>images/cactus_withered.png</file>
+    </qresource>
+</RCC>

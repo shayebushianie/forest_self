@@ -1,0 +1,40 @@
+﻿# 强力排除本地 Qt SDK 目录（10GB+，绝不提交）
+/Qt/
+
+# CMake 构建产物
+/build/
+/build-*/
+/Testing/
+/build_portable/
+/Forest_Portable/
+/FocusForest_Portable/
+/forest_portable/
+/focus_forest_portable/
+/artifacts/
+
+# 本地生成的运行时数据文件
+*.dat
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-migration.bak
+*.bak
+preferences.ini
+restore_request.txt
+ForestRestoreSnapshots/
+sessions.dat
+coins.dat
+app.log
+aqtinstall.log
+
+# 打包产物（按需手动归档，不进入源码版本库）
+*.zip
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Windows 系统文件
+Thumbs.db
+Desktop.ini

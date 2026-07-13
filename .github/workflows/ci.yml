@@ -1,0 +1,37 @@
+name: Windows CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.3'
+          arch: 'win64_mingw'
+      - uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package smoke test
+        shell: pwsh
+        run: ./scripts/package_portable.ps1 -BuildDir build -SmokeTest
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forest-qa-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            build/ui-fullscreen-snapshots/**
+            build/Testing/Temporary/LastTest.log
+            artifacts/**/*.zip
