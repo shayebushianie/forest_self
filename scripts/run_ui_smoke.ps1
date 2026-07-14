@@ -25,5 +25,9 @@ if ($logicalWidth -gt 0 -and $physicalWidth -gt 0) {
     $env:QT_SCALE_FACTOR = "1"
 }
 
-& $Executable @TestArguments
-exit $LASTEXITCODE
+$logPath = Join-Path (Split-Path -Parent $Executable) "ui-smoketest.log"
+$output = & $Executable @TestArguments 2>&1
+$exitCode = $LASTEXITCODE
+$output | Out-File -LiteralPath $logPath -Encoding utf8
+$output | ForEach-Object { Write-Output $_ }
+exit $exitCode
