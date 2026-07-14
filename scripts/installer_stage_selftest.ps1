@@ -71,8 +71,8 @@ $forbidden = @(
 )
 
 function Invoke-PackageExpectingReparseRejection([string]$name, [string]$portablePath, [string]$stagePath) {
-    Invoke-PackageCommand $portablePath $stagePath -StageOnly
-    if ($LASTEXITCODE -eq 0) {
+    $result = Invoke-PackageCommand $portablePath $stagePath -StageOnly
+    if ($result.Succeeded) {
         throw "$name reparse point was accepted."
     }
 }
@@ -100,18 +100,23 @@ function Invoke-PackageCommand(
     [switch]$StageOnly,
     [switch]$NoBuild
 ) {
-    $escapedScript = $packageScript.Replace("'", "''")
-    $escapedPortablePath = $portablePath.Replace("'", "''")
-    $escapedStagePath = $stagePath.Replace("'", "''")
-    $arguments = @()
+    $packageArguments = @{
+        PortableDir = $portablePath
+        StageDir = $stagePath
+    }
     if ($StageOnly) {
-        $arguments += '-StageOnly'
+        $packageArguments.StageOnly = $true
     }
     if ($NoBuild) {
-        $arguments += '-NoBuild'
+        $packageArguments.NoBuild = $true
     }
-    $command = "& { `$ErrorActionPreference = 'Stop'; try { & '$escapedScript' -PortableDir '$escapedPortablePath' -StageDir '$escapedStagePath' $($arguments -join ' '); exit 0 } catch { Write-Output `$_.Exception.Message; exit 1 } }"
-    & powershell -NoProfile -ExecutionPolicy Bypass -Command $command
+
+    try {
+        & $packageScript @packageArguments
+        return [pscustomobject]@{ Succeeded = $true; Message = '' }
+    } catch {
+        return [pscustomobject]@{ Succeeded = $false; Message = $_.Exception.Message }
+    }
 }
 
 function Test-PackageReparseGuards {
@@ -159,9 +164,8 @@ try {
         New-Item -ItemType File -Force -Path $path | Out-Null
     }
 
-    $LASTEXITCODE = 0
-    & $packageScript -PortableDir $portableRoot -StageDir $stageRoot -StageOnly
-    if ($LASTEXITCODE -ne 0) {
+    $stageResult = Invoke-PackageCommand $portableRoot $stageRoot -StageOnly
+    if (-not $stageResult.Succeeded) {
         throw 'Stage-only package command failed.'
     }
 
@@ -180,17 +184,17 @@ try {
     Test-PackageReparseGuards
 
     Remove-Item -LiteralPath (Join-Path $portableRoot 'sqldrivers\qsqlite.dll') -Force
-    Invoke-PackageCommand $portableRoot $stageRoot -StageOnly 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $missingRuntimeResult = Invoke-PackageCommand $portableRoot $stageRoot -StageOnly
+    if ($missingRuntimeResult.Succeeded) {
         throw 'Stage-only command accepted input without qsqlite.dll.'
     }
 
     $nonDefaultPortable = Join-Path $fixtureRoot 'different-portable'
-    $nonDefaultOutput = Invoke-PackageCommand $nonDefaultPortable $stageRoot -NoBuild 2>&1 | Out-String
-    if ($LASTEXITCODE -eq 0) {
+    $nonDefaultResult = Invoke-PackageCommand $nonDefaultPortable $stageRoot -NoBuild
+    if ($nonDefaultResult.Succeeded) {
         throw 'Non-stage package command accepted a non-default portable directory.'
     }
-    if ($nonDefaultOutput -notmatch [regex]::Escape('Non-stage packaging requires PortableDir artifacts/forest_portable.')) {
+    if ($nonDefaultResult.Message -notmatch [regex]::Escape('Non-stage packaging requires PortableDir artifacts/forest_portable.')) {
         throw 'Non-stage package command did not reject the non-default portable directory before portable packaging.'
     }
 } finally {
