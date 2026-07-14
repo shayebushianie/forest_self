@@ -311,13 +311,14 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         }
         window.resize(1280, 820);
 
-        const auto closeMessageBox = []() {
-            QTimer::singleShot(0, []() {
-                if (auto* dialog = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
-                    dialog->accept();
-                }
-            });
-        };
+        QTimer messageBoxCloser;
+        messageBoxCloser.setInterval(10);
+        QObject::connect(&messageBoxCloser, &QTimer::timeout, []() {
+            if (auto* dialog = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                dialog->accept();
+            }
+        });
+        messageBoxCloser.start();
 
         auto* shopNavigation = window.findChild<QPushButton*>("navShop");
         QVERIFY(shopNavigation);
@@ -327,14 +328,12 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         QTest::qWait(100);
         auto* purchase = buttonByTestId(window, QStringLiteral("shopPurchase_1"));
         QVERIFY(purchase && purchase->isEnabled());
-        closeMessageBox();
         QTest::mouseClick(purchase, Qt::LeftButton);
         QTRY_VERIFY(coins.isPlantUnlocked(1));
         captureFullscreen(QStringLiteral("shop-after-purchase"));
         auto* unaffordable = buttonByTestId(window, QStringLiteral("shopPurchase_3"));
         QVERIFY(unaffordable && unaffordable->isEnabled());
         const uint32_t beforeUnaffordablePurchase = coins.balance();
-        closeMessageBox();
         QTest::mouseClick(unaffordable, Qt::LeftButton);
         QTRY_COMPARE(coins.balance(), beforeUnaffordablePurchase);
 
@@ -368,7 +367,6 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         QTest::mouseClick(friendList->viewport(), Qt::LeftButton, Qt::NoModifier,
                           friendList->visualItemRect(friendList->item(0)).center());
         checkpoint(QStringLiteral("friends-selection-complete"));
-        closeMessageBox();
         QTest::mouseClick(sendRequest, Qt::LeftButton);
         QTRY_COMPARE(features.friends()->outgoingRequests().size(), 1);
         checkpoint(QStringLiteral("friends-request-complete"));
@@ -387,14 +385,13 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         const qreal rewardWidth = (checkinWidth - 52.0 - 40.0) / 5.0;
         const QPoint checkinCenter(static_cast<int>(30.0 + 26.0 +
             currentCheckin * (rewardWidth + 10.0) + rewardWidth / 2.0), 467);
-        closeMessageBox();
         QTest::mouseClick(challenge, Qt::LeftButton, Qt::NoModifier, checkinCenter);
         QTRY_COMPARE(checkinReward.count(), 1);
-        closeMessageBox();
         QTest::mouseClick(challenge, Qt::LeftButton, Qt::NoModifier, checkinCenter);
         QTest::qWait(50);
         QCOMPARE(checkinReward.count(), 1);
         captureFullscreen(QStringLiteral("challenge-after-checkin"));
+        messageBoxCloser.stop();
 
         auto* guardianNavigation = window.findChild<QPushButton*>("navGuardian");
         QVERIFY(guardianNavigation);
