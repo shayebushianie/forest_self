@@ -98,9 +98,10 @@ function Assert-NonReparseAncestry([string]$Path, [string]$Root) {
         $currentPath = $parent.FullName
     }
 
-    $canonicalRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $resolvedRoot).ProviderPath).TrimEnd('\') + '\'
-    $canonicalPath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $canonicalProbe).ProviderPath)
-    if (-not $canonicalPath.StartsWith($canonicalRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    $canonicalRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $resolvedRoot).ProviderPath).TrimEnd('\')
+    $canonicalPath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $canonicalProbe).ProviderPath).TrimEnd('\')
+    if (-not $canonicalPath.Equals($canonicalRoot, [StringComparison]::OrdinalIgnoreCase) -and
+        -not $canonicalPath.StartsWith($canonicalRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing cleanup because InstallDir resolves outside the temporary root: $canonicalPath"
     }
 }

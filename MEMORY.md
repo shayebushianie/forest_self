@@ -1,5 +1,12 @@
 # MEMORY.md
 
+## 实机安装包验证（2026-07-14）
+
+- 在隔离工作树的 `build-release-installer` 完成 Release 构建；`ctest --test-dir build-release-installer -C Release --output-on-failure` 为 6/6 通过。
+- 使用 NSIS 3.12 生成并实际安装、启动、卸载 `release/ForestFocus_Setup.exe`。安装包 SHA-256 为 `E05C6FDFD0551025B32DB7140A356074F193BAAC598DD09D42E69B52F5412CE4`；便携 ZIP SHA-256 为 `4992C19A26C23CC7CB0498CC0CC8032D2702A4AFEAC99AC294F428E355EECF51`。
+- 安装烟测验证 Qt SQL 运行时、禁止的运行时数据/备份内容、三秒存活和静默卸载均通过。现有 `%LOCALAPPDATA%\Forest` 已存在，因此按保护规则跳过哨兵写入，未改动用户数据。
+- 修复 `package_installer.ps1` 中字符串数组导致 `-NoBuild` 丢失的问题，并新增临时根目录下直接子目录的回归覆盖；同时允许其规范化路径恰好等于临时根目录，避免误拒绝安全的不存在安装目录。
+
 ## 安装包安全加固（2026-07-14）
 
 - `package_installer.ps1` 与安装后烟测现在统一排除 SQLite WAL/SHM、`preferences.ini`、`restore_request.txt` 和备份/快照路径；阶段自测覆盖这些运行时数据，以及阶段目录中的 junction 外部目标不得被清理。

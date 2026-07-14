@@ -33,7 +33,45 @@ $installerPath = Join-Path $fixtureRoot 'junction-installer.cmd'
 $logPath = Join-Path $fixtureRoot 'installer-smoke.log'
 $smokeScript = Join-Path $PSScriptRoot 'installer_smoketest.ps1'
 
+function Test-MissingLeafInsideTemporaryRoot {
+    $installPath = Join-Path ([IO.Path]::GetTempPath()) ("forest-installer-smoke-missing-leaf-{0}" -f [guid]::NewGuid())
+    $installerPath = Join-Path $fixtureRoot 'missing-leaf-installer.cmd'
+    $logPath = Join-Path $fixtureRoot 'missing-leaf-smoke.log'
+
+    try {
+        New-Item -ItemType Directory -Force -Path $fixtureRoot | Out-Null
+        @('@echo off', 'exit /b 1') | Set-Content -LiteralPath $installerPath -Encoding ascii
+        $previousErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            & powershell -NoProfile -ExecutionPolicy Bypass -File $smokeScript -Installer $installerPath -InstallDir $installPath -LogPath $logPath 2>$null
+            $smokeExit = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+
+        $log = Get-Content -LiteralPath $logPath -Raw
+        if ($smokeExit -eq 0) {
+            throw 'Missing-leaf temporary install fixture unexpectedly succeeded.'
+        }
+        if ($log -notmatch 'RUN: Starting installer') {
+            throw 'Missing-leaf temporary install path was rejected before installer startup.'
+        }
+        if ($log -match 'resolves outside the temporary root') {
+            throw 'Missing-leaf temporary install path was incorrectly treated as outside the temporary root.'
+        }
+
+        Write-Output 'PASS: Missing-leaf install path below the temporary root reaches installer startup.'
+    }
+    finally {
+        Remove-FixturePath $installPath
+        Remove-Item -LiteralPath $installerPath,$logPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 try {
+    Test-MissingLeafInsideTemporaryRoot
     New-Item -ItemType Directory -Force -Path $outsidePath | Out-Null
     New-Item -ItemType Directory -Force -Path $installPath | Out-Null
     Set-Content -LiteralPath (Join-Path $outsidePath 'keep.txt') -Value 'must survive junction cleanup test' -Encoding ascii

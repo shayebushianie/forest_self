@@ -179,9 +179,9 @@ if (-not $StageOnly -and -not $portablePath.Equals($defaultPortablePath, [System
 
 if (-not $StageOnly) {
     $portableScript = Join-Path $PSScriptRoot 'package_portable.ps1'
-    $portableArgs = @('-BuildDir', $BuildDir)
+    $portableArgs = @{ BuildDir = $BuildDir }
     if ($NoBuild) {
-        $portableArgs += '-NoBuild'
+        $portableArgs.NoBuild = $true
     }
     & $portableScript @portableArgs
     if (-not $?) {
