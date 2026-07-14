@@ -373,8 +373,10 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
 
         auto* challengeNavigation = window.findChild<QPushButton*>("navChallenges");
         QVERIFY(challengeNavigation);
+        checkpoint(QStringLiteral("challenges-navigation-ready"));
         QTest::mouseClick(challengeNavigation, Qt::LeftButton);
         QTRY_COMPARE(pageStack->currentIndex(), 7);
+        checkpoint(QStringLiteral("challenges-page-open"));
         auto* challenge = window.findChild<ChallengeDashboardWidget*>("challengeDashboard");
         QVERIFY(challenge);
         QTest::qWait(50);
@@ -385,11 +387,14 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         const qreal rewardWidth = (checkinWidth - 52.0 - 40.0) / 5.0;
         const QPoint checkinCenter(static_cast<int>(30.0 + 26.0 +
             currentCheckin * (rewardWidth + 10.0) + rewardWidth / 2.0), 467);
+        checkpoint(QStringLiteral("challenges-checkin-ready"));
         QTest::mouseClick(challenge, Qt::LeftButton, Qt::NoModifier, checkinCenter);
         QTRY_COMPARE(checkinReward.count(), 1);
+        checkpoint(QStringLiteral("challenges-checkin-rewarded"));
         QTest::mouseClick(challenge, Qt::LeftButton, Qt::NoModifier, checkinCenter);
         QTest::qWait(50);
         QCOMPARE(checkinReward.count(), 1);
+        checkpoint(QStringLiteral("challenges-second-checkin-complete"));
         captureFullscreen(QStringLiteral("challenge-after-checkin"));
         messageBoxCloser.stop();
 
