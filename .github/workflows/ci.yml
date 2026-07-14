@@ -62,6 +62,7 @@ jobs:
           if-no-files-found: warn
           path: |
             build/ui-fullscreen-snapshots/**
+            build/ui-smoketest.log
             build/Testing/Temporary/LastTest.log
             artifacts/**/*.zip
             release/ForestFocus_Setup.exe
