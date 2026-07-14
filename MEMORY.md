@@ -154,3 +154,11 @@
 
 - 下一次源码修改前，先确认 `build-architecture-upgrade` 是否仍可用；如需干净配置，使用独立构建目录并显式提供 Qt 路径。
 - 对架构、持久化或 UI 的重大改动，完成后记录实际变更、运行的验证和仍存风险；长期规则变化才同步 `AGENT.md`。
+
+## 安装包发布流水线验证（2026-07-14）
+
+- 发布分支 `release-installer-pipeline` 已完成真实本机和 GitHub Actions 验证。最终 CI：<https://github.com/shayebushianie/forest_self/actions/runs/29345793967>，推送与 PR 触发均成功。
+- CI 通过 Release 构建、6 项 CTest、三项安装安全回归、便携包启动检查、NSIS 安装包构建，以及静默安装、应用启动、禁止运行时数据检查和静默卸载。
+- CI 工件已复核：`ForestFocus_Setup.exe` SHA-256 为 `40776CC9856925E15AE378248192BD120A4F0AA993671CEBF37E22AED82F2D07`；`forest_portable.zip` SHA-256 为 `01D2D04BB8F021E1797BDC3E0583B453915A74DFC2052DBE5B0F5B34B63A3C08`。安装烟雾日志以 `FINAL: PASS` 结束。
+- 已人工复核 CI 生成的 1366x768、1440x900、1920x1080 首页和森林页截图：核心控件与森林统计头部均在可见区域。UI 烟雾测试改为按实际紧凑布局计算挑战签到的点击位置，并持续关闭仅用于测试的标准消息框，以消除 CI DPI/时序导致的假失败。
+- 后续发布时，将 CI 工件中的安装包与便携包及各自 `.sha256` 上传到 GitHub Release；不要上传运行数据、日志、构建目录或 Qt SDK。
