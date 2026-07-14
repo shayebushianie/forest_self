@@ -25,7 +25,8 @@ function Remove-FixturePath([string]$Path) {
     Remove-Item -LiteralPath $item.FullName -Force
 }
 
-$fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ("forest-installer-smoke-selftest-{0}" -f [guid]::NewGuid())
+$temporaryRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
+$fixtureRoot = Join-Path $temporaryRoot ("forest-installer-smoke-selftest-{0}" -f [guid]::NewGuid())
 $installPath = Join-Path $fixtureRoot 'install'
 $outsidePath = Join-Path $fixtureRoot 'outside'
 $junctionPath = Join-Path $installPath 'escape'
@@ -34,7 +35,8 @@ $logPath = Join-Path $fixtureRoot 'installer-smoke.log'
 $smokeScript = Join-Path $PSScriptRoot 'installer_smoketest.ps1'
 
 function Test-MissingLeafInsideTemporaryRoot {
-    $installPath = Join-Path ([IO.Path]::GetTempPath()) ("forest-installer-smoke-missing-leaf-{0}" -f [guid]::NewGuid())
+    $temporaryRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
+    $installPath = Join-Path $temporaryRoot ("forest-installer-smoke-missing-leaf-{0}" -f [guid]::NewGuid())
     $installerPath = Join-Path $fixtureRoot 'missing-leaf-installer.cmd'
     $logPath = Join-Path $fixtureRoot 'missing-leaf-smoke.log'
 
