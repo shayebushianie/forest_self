@@ -4,6 +4,7 @@
 - Clash Verge 与 mihomo 正在运行，系统代理已启用且本机代理端口在监听；但 WinHTTP 和当前终端的代理环境变量均为直连，导致 `gh auth login` 与 Git HTTPS 连接被重置。
 - 仅为当前 Git/GitHub CLI 命令注入系统代理后，`https://github.com` 返回 HTTP 200；已完成 GitHub CLI 账号授权。未修改全局代理或 Git 配置。
 - 远端 `main` 与本地历史无共同祖先，且包含便携包、构建目录和日志；为避免覆盖远端内容，本地基线与安装包流水线应以独立分支推送并通过草稿 PR 审阅，禁止强推远端 `main`。
+- 已推送 `agent/local-release-baseline` 与 `release-installer-pipeline`；草稿 PR #1 从后者指向前者。三个安装包安全自测已通过；完整 Release、CTest 和真实 NSIS 安装器烟测仍待 CI 或具备 Qt/NSIS 的环境。
 
 ## 发布与质量基线（2026-07-14）
 
