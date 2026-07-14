@@ -28,6 +28,32 @@ survives uninstallation; it intentionally leaves that sentinel in place.
   liveness check, and uninstaller path.
 - `git diff --check` completed successfully.
 
+## Review correction (pre-install path validation)
+
+The complete safe-path assertion now runs before the process check, LocalAppData
+sentinel handling, and installer `Start-Process`, as well as again before
+cleanup. For a new install directory, it walks from the missing leaf upward,
+checks every existing component through the temporary root for reparse points,
+and resolves the nearest existing canonical target for temporary-root
+containment. Thus an existing `pivot` junction is rejected even when
+`pivot\install` has not yet been created.
+
+The ancestor-junction fixture now explicitly asserts that its log has no
+`RUN: Starting installer` entry. On this machine it passed: the only terminal
+record was the expected `FINAL: FAIL` reparse rejection, and the external
+sentinel remained intact.
+
+Fresh validation after this correction:
+
+- Parser checks passed for the smoke script and both junction fixtures.
+- The `C:\ForestFocus` external-path case still fails before installer start.
+- Descendant junction coverage still refuses cleanup after the fake installer
+  creates a junction, while ancestor junction coverage rejects before installer
+  startup.
+- Static checks confirmed the pre-install assertion, canonical containment,
+  non-recursive cleanup, and absence of LocalAppData cleanup.
+- `git diff --check` completed successfully.
+
 ## Review correction (ancestor reparse escape)
 
 The reparse guard now walks every existing lexical component from the install

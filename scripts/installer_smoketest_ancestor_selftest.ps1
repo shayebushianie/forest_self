@@ -75,6 +75,9 @@ try {
     if ($log -notmatch 'FINAL: FAIL: .*reparse') {
         throw 'Ancestor-junction cleanup rejection was not recorded as FINAL: FAIL.'
     }
+    if ($log -match 'RUN: Starting installer') {
+        throw 'Installer started despite an ancestor junction outside the selected temporary root.'
+    }
     if (-not (Test-Path -LiteralPath (Join-Path $outsidePath 'keep.txt') -PathType Leaf)) {
         throw 'Ancestor-junction cleanup reached the external fixture target.'
     }

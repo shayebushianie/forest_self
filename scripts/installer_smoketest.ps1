@@ -69,15 +69,17 @@ function Assert-NonReparseAncestry([string]$Path, [string]$Root) {
     $resolvedPath = [IO.Path]::GetFullPath($Path)
     $resolvedRoot = [IO.Path]::GetFullPath($Root).TrimEnd('\')
     $currentPath = $resolvedPath
+    $canonicalProbe = $null
 
     while ($true) {
-        if (-not (Test-Path -LiteralPath $currentPath)) {
-            throw "Refusing cleanup because an InstallDir path component does not exist: $currentPath"
-        }
-
-        $currentItem = Get-Item -LiteralPath $currentPath -Force
-        if (Test-ReparsePoint $currentItem) {
-            throw "Refusing cleanup because an InstallDir ancestor is a reparse point: $currentPath"
+        if (Test-Path -LiteralPath $currentPath) {
+            if ($null -eq $canonicalProbe) {
+                $canonicalProbe = $currentPath
+            }
+            $currentItem = Get-Item -LiteralPath $currentPath -Force
+            if (Test-ReparsePoint $currentItem) {
+                throw "Refusing cleanup because an InstallDir ancestor is a reparse point: $currentPath"
+            }
         }
         if ($currentPath.Equals($resolvedRoot, [StringComparison]::OrdinalIgnoreCase)) {
             break
@@ -91,7 +93,7 @@ function Assert-NonReparseAncestry([string]$Path, [string]$Root) {
     }
 
     $canonicalRoot = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $resolvedRoot).ProviderPath).TrimEnd('\') + '\'
-    $canonicalPath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $resolvedPath).ProviderPath)
+    $canonicalPath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $canonicalProbe).ProviderPath)
     if (-not $canonicalPath.StartsWith($canonicalRoot, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing cleanup because InstallDir resolves outside the temporary root: $canonicalPath"
     }
@@ -102,14 +104,13 @@ function Assert-SafeTemporaryInstallPath([string]$Path) {
     if (-not $resolvedPath.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing cleanup outside the temporary root: $resolvedPath"
     }
-    if (-not (Test-Path -LiteralPath $resolvedPath)) {
-        return $resolvedPath
-    }
 
     Assert-NonReparseAncestry $resolvedPath $tempRoot
-    $reparsePoint = Find-ReparsePoint $resolvedPath
-    if ($reparsePoint) {
-        throw "Refusing cleanup because InstallDir contains a reparse point: $reparsePoint"
+    if (Test-Path -LiteralPath $resolvedPath) {
+        $reparsePoint = Find-ReparsePoint $resolvedPath
+        if ($reparsePoint) {
+            throw "Refusing cleanup because InstallDir contains a reparse point: $reparsePoint"
+        }
     }
 
     return $resolvedPath
@@ -168,6 +169,8 @@ try {
     Assert-Smoke (-not ($installPath -eq $productionInstall -and (Test-Path -LiteralPath $productionInstall))) 'InstallDir is not an existing production installation directory'
     Assert-Smoke (-not (Test-Path -LiteralPath $installPath)) "InstallDir does not already exist: $installPath"
     Assert-Smoke (-not ($installPath -match '\s')) 'InstallDir does not contain whitespace required by NSIS /D='
+    Assert-SafeTemporaryInstallPath $installPath | Out-Null
+    Write-SmokeLog 'PASS: InstallDir ancestry and canonical target are below the temporary root'
 
     $runningForest = @(Get-Process -Name 'forest' -ErrorAction SilentlyContinue)
     Assert-Smoke ($runningForest.Count -eq 0) 'No forest process is running before installation'
