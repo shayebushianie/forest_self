@@ -13,9 +13,15 @@ jobs:
         with:
           version: '6.5.3'
           arch: 'win64_mingw'
-      - uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
+      - name: Install MinGW
+        shell: pwsh
+        run: |
+          choco install mingw --yes --no-progress
+          $mingwBin = 'C:\ProgramData\mingw64\mingw64\bin'
+          if (-not (Test-Path -LiteralPath (Join-Path $mingwBin 'g++.exe'))) {
+            throw "MinGW compiler was not installed at $mingwBin"
+          }
+          $mingwBin | Add-Content -LiteralPath $env:GITHUB_PATH -Encoding utf8
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
