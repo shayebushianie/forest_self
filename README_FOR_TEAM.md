@@ -53,6 +53,14 @@ build-release/forest.exe
 .\scripts\package_portable.ps1 -BuildDir build-release -SmokeTest
 ```
 
+安装包打包与烟测（从源码根目录运行）：
+
+```powershell
+./scripts/package_installer.ps1 -BuildDir build-release
+./scripts/installer_smoketest.ps1 -Installer ./release/ForestFocus_Setup.exe `
+  -InstallDir "$env:TEMP\forest-installer-smoke"
+```
+
 ## 注意事项
 
 - 请不要提交或转发 `build/`、`Qt/`、`artifacts/` 等大体积或可再生成目录。

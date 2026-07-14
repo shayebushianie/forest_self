@@ -25,6 +25,20 @@ jobs:
       - name: Package smoke test
         shell: pwsh
         run: ./scripts/package_portable.ps1 -BuildDir build -SmokeTest
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+      - name: Package installer
+        shell: pwsh
+        run: >-
+          ./scripts/package_installer.ps1 -BuildDir build
+          -NsisCompiler "${env:ProgramFiles(x86)}\NSIS\makensis.exe" -NoBuild
+      - name: Installer smoke test
+        shell: pwsh
+        run: >-
+          ./scripts/installer_smoketest.ps1
+          -Installer ./release/ForestFocus_Setup.exe
+          -InstallDir "${env:RUNNER_TEMP}\forest-installer-smoke"
       - name: Upload QA artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -35,3 +49,6 @@ jobs:
             build/ui-fullscreen-snapshots/**
             build/Testing/Temporary/LastTest.log
             artifacts/**/*.zip
+            release/ForestFocus_Setup.exe
+            artifacts/*.sha256
+            artifacts/installer-smoke.log

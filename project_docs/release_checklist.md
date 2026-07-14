@@ -12,8 +12,15 @@ Run this checklist from the source and Git root before distributing a release.
 ## Package and smoke test
 
 1. Run `./scripts/package_portable.ps1 -BuildDir <build-dir> -SmokeTest`.
-2. Record the SHA-256 of the portable archive and the deployed executable.
-3. When producing the NSIS installer from the workspace-level `installer/` directory, install it into a temporary directory, launch it, then uninstall it. Confirm user data is not included in the package and is not removed by uninstall.
+2. Run:
+
+   ```powershell
+   ./scripts/package_installer.ps1 -BuildDir <build-dir>
+   ./scripts/installer_smoketest.ps1 -Installer ./release/ForestFocus_Setup.exe `
+     -InstallDir "$env:TEMP\forest-installer-smoke"
+   ```
+
+3. Review `artifacts/*.sha256` and `artifacts/installer-smoke.log`. Confirm user data is not included in the package and is not removed by uninstall.
 
 ## Release record
 

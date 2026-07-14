@@ -1,5 +1,12 @@
 # MEMORY.md
 
+## 安装包 CI 与本地发布验证（2026-07-14）
+
+- Windows CI 现会在便携包烟测后安装 NSIS、构建 `release/ForestFocus_Setup.exe` 并运行安装器烟测；无论结果如何都会上传安装器、`artifacts/*.sha256` 和 `artifacts/installer-smoke.log`，以及既有 UI 截图、CTest 日志和便携 ZIP。
+- 规范发布入口已统一为源码根目录的 `installer/forest_installer.nsi`、`scripts/package_installer.ps1` 和 `scripts/installer_smoketest.ps1`；发布清单要求审阅两个 SHA-256 文件和安装器烟测日志。
+- 本轮本地结果：`scripts/installer_stage_selftest.ps1` 退出码为 0。`build-architecture-upgrade` 在该 worktree 中不存在，因此 Release 构建和 CTest 均未启动（两条命令均退出码 1，CTest 没有测试结果）。`package_installer.ps1 -BuildDir build-architecture-upgrade -NoBuild` 退出码为 1，原因是本机没有 `windeployqt`；同时未找到 `makensis.exe`。因此没有生成便携 ZIP 或安装器，`artifacts/forest_portable.sha256` 与 `artifacts/ForestFocus_Setup.sha256` 均无本轮值。
+- 安装器烟测命令退出码为 1，唯一原因是 `release/ForestFocus_Setup.exe` 不存在；它在创建或检查 LocalAppData sentinel 之前失败，因此未运行用户数据 sentinel 验证。尚未触发远程 CI，故没有可记录的工作流 URL、结果或下载产物审阅结论。
+
 ## 发布与质量基线（2026-07-14）
 
 - 协作文件已统一到源码 Git 根目录：`AGENTS.md`（稳定规则）与本文件（动态记录）；根工作区旧 `AGENT.md`/`MEMORY.md` 已迁移，不再作为协作入口。
