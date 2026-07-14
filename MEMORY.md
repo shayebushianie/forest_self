@@ -1,5 +1,12 @@
 # MEMORY.md
 
+## 安装包安全加固（2026-07-14）
+
+- `package_installer.ps1` 与安装后烟测现在统一排除 SQLite WAL/SHM、`preferences.ini`、`restore_request.txt` 和备份/快照路径；阶段自测覆盖这些运行时数据，以及阶段目录中的 junction 外部目标不得被清理。
+- 阶段目录删除会在删除前重新验证，并逐项以不穿越 reparse point 的方式删除；CI 在任何打包步骤前依次运行三个安装包安全自测。
+- 若烟测创建了 `%LOCALAPPDATA%\Forest` 与 sentinel，会在卸载后的保留断言之后仅删除该测试创建的 sentinel 和空目录；既有 LocalAppData 数据绝不修改。
+- 已执行并通过三个 PowerShell 安全自测：`installer_stage_selftest.ps1`、`installer_smoketest_selftest.ps1` 和 `installer_smoketest_ancestor_selftest.ps1`。本轮未执行 NSIS 或 Qt 构建/安装包验证，不能将这些自测等同于完整发布验证。
+
 ## 安装包 CI 与本地发布验证（2026-07-14）
 
 - Windows CI 现会在便携包烟测后安装 NSIS、构建 `release/ForestFocus_Setup.exe` 并运行安装器烟测；无论结果如何都会上传安装器、`artifacts/*.sha256` 和 `artifacts/installer-smoke.log`，以及既有 UI 截图、CTest 日志和便携 ZIP。

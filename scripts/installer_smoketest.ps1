@@ -10,7 +10,13 @@ $expected = @(
     'app\forest.exe', 'app\Qt6Sql.dll',
     'app\platforms\qwindows.dll', 'app\sqldrivers\qsqlite.dll'
 )
-$forbidden = @('app\forest.portable', 'app\app_data')
+$forbidden = @(
+    'app\forest.portable', 'app\app_data',
+    'app\sessions.sqlite-wal', 'app\sessions.sqlite-shm',
+    'app\preferences.ini', 'app\restore_request.txt',
+    'app\backup', 'app\snapshots', 'app\ForestRestoreSnapshots'
+)
+$forbiddenRuntimePattern = '(^|\\)(forest\.portable|app_data|backup|backups|snapshot|snapshots|ForestRestoreSnapshots)(\\|$)|(^|\\)(preferences\.ini|restore_request\.txt)$|\.(sqlite|sqlite-wal|sqlite-shm|dat|log|bak)$'
 
 function Resolve-AbsolutePath([string]$Path) {
     if ([IO.Path]::IsPathRooted($Path)) {
@@ -142,6 +148,21 @@ function Remove-ValidatedTemporaryInstallDirectory([string]$Path) {
     Write-SmokeLog "CLEANUP: Removed temporary installation directory: $cleanupPath"
 }
 
+function Remove-TestCreatedLocalData([string]$SentinelPath, [string]$LocalDataPath, [bool]$DirectoryCreated) {
+    if (Test-Path -LiteralPath $SentinelPath -PathType Leaf) {
+        Remove-Item -LiteralPath $SentinelPath -Force
+        Write-SmokeLog "CLEANUP: Removed test-created LocalAppData sentinel: $SentinelPath"
+    }
+
+    if ($DirectoryCreated -and (Test-Path -LiteralPath $LocalDataPath)) {
+        $remainingItems = @(Get-ChildItem -LiteralPath $LocalDataPath -Force)
+        if ($remainingItems.Count -eq 0) {
+            Remove-Item -LiteralPath $LocalDataPath -Force
+            Write-SmokeLog "CLEANUP: Removed empty test-created LocalAppData directory: $LocalDataPath"
+        }
+    }
+}
+
 $installerPath = Resolve-AbsolutePath $Installer
 $installPath = Resolve-AbsolutePath $InstallDir
 $logPath = Resolve-AbsolutePath $LogPath
@@ -153,6 +174,7 @@ $tempRoot = [IO.Path]::GetFullPath(
     $(if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() })
 ).TrimEnd('\') + '\'
 $sentinelCreated = $false
+$localDataDirectoryCreated = $false
 $sentinelPath = $null
 $installerStarted = $false
 $appProcess = $null
@@ -179,7 +201,8 @@ try {
     if (Test-Path -LiteralPath $localDataPath) {
         Write-SmokeLog "PASS: Existing LocalAppData preservation verification is skipped; directory is never modified: $localDataPath"
     } else {
-        New-Item -ItemType Directory -Force -Path $localDataPath | Out-Null
+        New-Item -ItemType Directory -Path $localDataPath | Out-Null
+        $localDataDirectoryCreated = $true
         $sentinelPath = Join-Path $localDataPath ("installer-smoke-sentinel-{0}.txt" -f [guid]::NewGuid())
         New-Item -ItemType File -Path $sentinelPath | Out-Null
         $sentinelCreated = $true
@@ -201,9 +224,12 @@ try {
     $appPath = Join-Path $installPath 'app\forest.exe'
     $forbiddenRuntimeFiles = @(
         Get-ChildItem -LiteralPath (Join-Path $installPath 'app') -Recurse -Force -File |
-            Where-Object { $_.Name -match '\.sqlite$|\.dat$|\.log$|\.bak$' }
+            Where-Object {
+                $relative = $_.FullName.Substring($installPath.Length).TrimStart('\')
+                $relative -match $forbiddenRuntimePattern
+            }
     )
-    Assert-Smoke ($forbiddenRuntimeFiles.Count -eq 0) 'No SQLite, DAT, LOG, or BAK file is installed below app'
+    Assert-Smoke ($forbiddenRuntimeFiles.Count -eq 0) 'No runtime data, backup, or snapshot file is installed below app'
 
     Write-SmokeLog "RUN: Starting application: $appPath"
     $appProcess = Start-Process -FilePath $appPath -WindowStyle Hidden -PassThru
@@ -221,6 +247,7 @@ try {
     Assert-Smoke (-not (Test-Path -LiteralPath $appPath)) 'Application executable is absent after uninstallation'
     if ($sentinelCreated) {
         Assert-Smoke (Test-Path -LiteralPath $sentinelPath -PathType Leaf) 'Created LocalAppData sentinel remains after uninstallation'
+        Remove-TestCreatedLocalData $sentinelPath $localDataPath $localDataDirectoryCreated
     }
 
     $succeeded = $true
@@ -240,6 +267,10 @@ finally {
 
         if ($installerStarted -and (Test-Path -LiteralPath $installPath)) {
             Remove-ValidatedTemporaryInstallDirectory $installPath
+        }
+
+        if ($sentinelCreated) {
+            Remove-TestCreatedLocalData $sentinelPath $localDataPath $localDataDirectoryCreated
         }
     }
     catch {

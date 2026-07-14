@@ -22,6 +22,15 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Installer stage safety self-test
+        shell: pwsh
+        run: ./scripts/installer_stage_selftest.ps1
+      - name: Installer smoke safety self-test
+        shell: pwsh
+        run: ./scripts/installer_smoketest_selftest.ps1
+      - name: Installer smoke ancestor safety self-test
+        shell: pwsh
+        run: ./scripts/installer_smoketest_ancestor_selftest.ps1
       - name: Package smoke test
         shell: pwsh
         run: ./scripts/package_portable.ps1 -BuildDir build -SmokeTest

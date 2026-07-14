@@ -15,7 +15,7 @@ $requiredFiles = @(
     'forest.exe', 'Qt6Sql.dll',
     'platforms\qwindows.dll', 'sqldrivers\qsqlite.dll'
 )
-$forbiddenPattern = '(^|\\)(forest\.portable|app_data)(\\|$)|\.(sqlite|dat|log|bak)$'
+$forbiddenPattern = '(^|\\)(forest\.portable|app_data|backup|backups|snapshot|snapshots|ForestRestoreSnapshots)(\\|$)|(^|\\)(preferences\.ini|restore_request\.txt)$|\.(sqlite|sqlite-wal|sqlite-shm|dat|log|bak)$'
 
 function Resolve-ArtifactPath([string]$path, [string]$description) {
     if ([System.IO.Path]::IsPathRooted($path)) {
@@ -77,6 +77,30 @@ function Assert-NoReparsePoints([string]$path, [string]$description, [switch]$Re
     }
 }
 
+function Remove-NonTraversingPath([string]$path, [string]$description) {
+    $item = Get-Item -LiteralPath $path -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "$description became a reparse point before deletion: $($item.FullName)"
+    }
+
+    if ($item.PSIsContainer) {
+        foreach ($child in Get-ChildItem -LiteralPath $item.FullName -Force) {
+            Remove-NonTraversingPath $child.FullName $description
+        }
+    }
+
+    $item = Get-Item -LiteralPath $item.FullName -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "$description became a reparse point before deletion: $($item.FullName)"
+    }
+    Remove-Item -LiteralPath $item.FullName -Force
+}
+
+function Remove-InstallerStageDirectory([string]$stagePath) {
+    Assert-NoReparsePoints $stagePath 'Installer stage directory' -Recurse
+    Remove-NonTraversingPath $stagePath 'Installer stage directory'
+}
+
 function Test-PathsOverlap([string]$firstPath, [string]$secondPath) {
     $firstPrefix = $firstPath.TrimEnd('\') + '\'
     $secondPrefix = $secondPath.TrimEnd('\') + '\'
@@ -106,7 +130,7 @@ function New-InstallerStage([string]$portablePath, [string]$stagePath) {
     }
 
     if (Test-Path -LiteralPath $stagePath) {
-        Remove-Item -LiteralPath $stagePath -Recurse -Force
+        Remove-InstallerStageDirectory $stagePath
     }
     New-Item -ItemType Directory -Path $stagePath | Out-Null
 

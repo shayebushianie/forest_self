@@ -63,7 +63,11 @@ $required = @(
 )
 $forbidden = @(
     'forest.portable', 'app_data\sessions.sqlite',
-    'session.dat', 'app.log', 'backup.bak'
+    'session.dat', 'app.log', 'backup.bak',
+    'sessions.sqlite-wal', 'sessions.sqlite-shm',
+    'preferences.ini', 'restore_request.txt',
+    'backup\archive.bin', 'snapshots\state.bin',
+    'ForestRestoreSnapshots\snapshot.bin'
 )
 
 function Invoke-PackageExpectingReparseRejection([string]$name, [string]$portablePath, [string]$stagePath) {
@@ -71,6 +75,23 @@ function Invoke-PackageExpectingReparseRejection([string]$name, [string]$portabl
     if ($LASTEXITCODE -eq 0) {
         throw "$name reparse point was accepted."
     }
+}
+
+function Remove-ReparseFixture([string]$path) {
+    if (-not (Test-Path -LiteralPath $path)) {
+        return
+    }
+
+    $item = Get-Item -LiteralPath $path -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        cmd.exe /d /s /c "rmdir `"$($item.FullName)`"" | Out-Null
+        if (Test-Path -LiteralPath $item.FullName) {
+            throw "Unable to remove reparse-point fixture: $($item.FullName)"
+        }
+        return
+    }
+
+    Remove-Item -LiteralPath $item.FullName -Recurse -Force
 }
 
 function Invoke-PackageCommand(
@@ -111,19 +132,23 @@ function Test-PackageReparseGuards {
     try {
         Invoke-PackageExpectingReparseRejection 'Portable input descendant' $portableRoot (Join-Path $fixtureRoot 'stage-from-portable-reparse')
     } finally {
-        if (Test-Path -LiteralPath $portableLink) {
-            Remove-Item -LiteralPath $portableLink -Force
-        }
+        Remove-ReparseFixture $portableLink
     }
 
     try {
         New-Item -ItemType Directory -Force -Path $stageWithLink, $stageTarget | Out-Null
+        $stageTargetSentinel = Join-Path $stageTarget 'keep.txt'
+        Set-Content -LiteralPath $stageTargetSentinel -Value 'must survive stage cleanup rejection' -Encoding ascii
         New-Item -ItemType Junction -Path $stageLink -Target $stageTarget | Out-Null
         Invoke-PackageExpectingReparseRejection 'Stage descendant' $portableRoot $stageWithLink
-    } finally {
-        if (Test-Path -LiteralPath $stageLink) {
-            Remove-Item -LiteralPath $stageLink -Force
+        if (-not (Test-Path -LiteralPath $stageTargetSentinel -PathType Leaf)) {
+            throw 'Stage cleanup followed a reparse point outside the stage directory.'
         }
+        if (-not (Test-Path -LiteralPath $stageLink)) {
+            throw 'Stage reparse point was removed instead of rejecting cleanup.'
+        }
+    } finally {
+        Remove-ReparseFixture $stageLink
     }
 }
 
