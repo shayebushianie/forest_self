@@ -2,6 +2,9 @@
 
 ## 发布与质量基线（2026-07-14）
 
+- 已批准“可复现安装包发布流水线”设计，详见 `project_docs/release-installer-design.md`。实现位于待合并的 `release-installer-pipeline` 分支，范围为规范化源码内安装脚本、以便携包为唯一安装输入、NSIS 安装/启动/卸载烟雾测试和 CI 工件；明确不包含自动发布、代码签名或产品功能改动。
+- 详细实施计划见 `project_docs/release-installer-implementation-plan.md`。该分支已完成暂存隔离、NSIS 输入、安装烟雾、CI/文档四个验证单元，并通过三个 PowerShell 安全自测；因该隔离工作树没有 Qt/NSIS 构建依赖，完整 Release、CTest 与真实安装器烟测仍待 CI 或具备依赖的本机验证。
+
 - 协作文件已统一到源码 Git 根目录：`AGENTS.md`（稳定规则）与本文件（动态记录）；根工作区旧 `AGENT.md`/`MEMORY.md` 已迁移，不再作为协作入口。
 - `forest_ui_smoketest` 现覆盖 1366×768、1440×900、1920×1080 三种尺寸：首页断言标签、时长卡和开始按钮完整可见；森林页断言统计头部可见；六张截图输出到 `build-*/ui-fullscreen-snapshots/`。Windows 通过 `scripts/run_ui_smoke.ps1` 按实际 DPI 归一化 Qt 缩放，避免高 DPI 机器误报。
 - CI 保留构建、6 项 CTest 和便携包启动检查；无论成功或失败都会上传 UI 截图、CTest 日志和便携包 ZIP。`package_portable.ps1` 不再包含机器专属 Qt 路径，仅使用参数、CMake 缓存或环境变量定位 Qt。
