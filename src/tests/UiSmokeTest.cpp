@@ -383,7 +383,7 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         QSignalSpy checkinReward(challenge, &ChallengeDashboardWidget::rewardCoinsRequested);
         const int currentCheckin = (QDate::currentDate().day() - 1) % 5;
         const qreal contentWidth = challenge->width() - 60.0;
-        const qreal checkinWidth = contentWidth * 0.34;
+        const qreal checkinWidth = contentWidth < 900.0 ? contentWidth : contentWidth * 0.34;
         const qreal rewardWidth = (checkinWidth - 52.0 - 40.0) / 5.0;
         const QPoint checkinCenter(static_cast<int>(30.0 + 26.0 +
             currentCheckin * (rewardWidth + 10.0) + rewardWidth / 2.0), 467);
