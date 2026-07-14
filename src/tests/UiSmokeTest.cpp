@@ -135,6 +135,9 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         QTextStream manifestStream(&manifest);
         manifestStream << "Forest full-screen visual baseline\n";
         manifestStream << "generated=" << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
+        const auto checkpoint = [&manifestStream](const QString& step) {
+            manifestStream << "checkpoint=" << step << Qt::endl;
+        };
         LoginDialog loginDialog(users, &window);
         QVERIFY(loginDialog.windowFlags() & Qt::FramelessWindowHint);
         loginDialog.show();
@@ -345,11 +348,14 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         QTest::mouseClick(gachaPull, Qt::LeftButton);
         QTRY_VERIFY(gachaResult->text() != QStringLiteral("准备发掘新的异色树种"));
         captureFullscreen(QStringLiteral("gacha-after-pull"));
+        checkpoint(QStringLiteral("gacha-pull-complete"));
 
         auto* friendsNavigation = window.findChild<QPushButton*>("navFriends");
         QVERIFY(friendsNavigation);
+        checkpoint(QStringLiteral("friends-navigation-ready"));
         QTest::mouseClick(friendsNavigation, Qt::LeftButton);
         QTRY_COMPARE(pageStack->currentIndex(), 6);
+        checkpoint(QStringLiteral("friends-page-open"));
         auto* friendPage = window.findChild<QWidget*>("friendsPage");
         auto* friendSearch = friendPage ? friendPage->findChild<QLineEdit*>("friendSearchInput") : nullptr;
         auto* friendList = friendPage ? friendPage->findChild<QListWidget*>("friendUserList") : nullptr;
@@ -358,11 +364,14 @@ void UiSmokeTest::mainWindowFocusAndNavigation()
         friendSearch->setText(QStringLiteral("ui-smoke-friend"));
         QTest::keyClick(friendSearch, Qt::Key_Return);
         QTRY_COMPARE(friendList->count(), 1);
+        checkpoint(QStringLiteral("friends-search-complete"));
         QTest::mouseClick(friendList->viewport(), Qt::LeftButton, Qt::NoModifier,
                           friendList->visualItemRect(friendList->item(0)).center());
+        checkpoint(QStringLiteral("friends-selection-complete"));
         closeMessageBox();
         QTest::mouseClick(sendRequest, Qt::LeftButton);
         QTRY_COMPARE(features.friends()->outgoingRequests().size(), 1);
+        checkpoint(QStringLiteral("friends-request-complete"));
 
         auto* challengeNavigation = window.findChild<QPushButton*>("navChallenges");
         QVERIFY(challengeNavigation);
