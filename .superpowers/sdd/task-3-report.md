@@ -28,6 +28,34 @@ survives uninstallation; it intentionally leaves that sentinel in place.
   liveness check, and uninstaller path.
 - `git diff --check` completed successfully.
 
+## Review correction (ancestor reparse escape)
+
+The reparse guard now walks every existing lexical component from the install
+directory back to the selected temporary root, rejecting any reparse point on
+that chain. It also resolves the existing install path and temporary root and
+requires the canonical install target to remain below the canonical temporary
+root. This closes the `%TEMP%\pivot\install` case where `pivot` is a junction
+outside the selected temporary root.
+
+Added `scripts/installer_smoketest_ancestor_selftest.ps1`. It selects an
+isolated `RUNNER_TEMP`, creates `RUNNER_TEMP\pivot` as a junction to a sibling
+external fixture, and has a fake installer create `pivot\install`. The test
+requires a `FINAL: FAIL` reparse rejection, verifies the external sentinel
+survives, and confirms the pivot junction was not removed. It skips cleanly if
+junctions are unavailable.
+
+Fresh validation after this correction:
+
+- Parser checks passed for the smoke script and both junction fixtures.
+- The external `C:\ForestFocus` rejection still exits non-zero before starting
+  an installer.
+- Both descendant- and ancestor-junction fixtures passed, preserving their
+  external sentinels and recording cleanup refusal in `FINAL: FAIL`.
+- Static checks confirmed non-recursive deletion, descendant and ancestor
+  reparse guards, canonical temporary-root containment, and no LocalAppData
+  cleanup target.
+- `git diff --check` completed successfully.
+
 ## Limits and concerns
 
 `makensis.exe` is not available on this machine, so no
