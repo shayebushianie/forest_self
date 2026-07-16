@@ -7,6 +7,28 @@
 - 已推送 `agent/local-release-baseline` 与 `release-installer-pipeline`；草稿 PR #1 从后者指向前者。三个安装包安全自测已通过；完整 Release、CTest 和真实 NSIS 安装器烟测仍待 CI 或具备 Qt/NSIS 的环境。
 - 为更新仓库首页而不丢失旧内容，远端旧 `main` 已重命名为 `legacy-version-2`，当前本地 `main` 已发布为新的默认分支；草稿 PR #1 的目标已改为新 `main`。
 
+## 实机安装包验证（2026-07-14）
+
+- 在隔离工作树的 `build-release-installer` 完成 Release 构建；`ctest --test-dir build-release-installer -C Release --output-on-failure` 为 6/6 通过。
+- 使用 NSIS 3.12 生成并实际安装、启动、卸载 `release/ForestFocus_Setup.exe`。安装包 SHA-256 为 `E05C6FDFD0551025B32DB7140A356074F193BAAC598DD09D42E69B52F5412CE4`；便携 ZIP SHA-256 为 `4992C19A26C23CC7CB0498CC0CC8032D2702A4AFEAC99AC294F428E355EECF51`。
+- 安装烟测验证 Qt SQL 运行时、禁止的运行时数据/备份内容、三秒存活和静默卸载均通过。现有 `%LOCALAPPDATA%\Forest` 已存在，因此按保护规则跳过哨兵写入，未改动用户数据。
+- 修复 `package_installer.ps1` 中字符串数组导致 `-NoBuild` 丢失的问题，并新增临时根目录下直接子目录的回归覆盖；同时允许其规范化路径恰好等于临时根目录，避免误拒绝安全的不存在安装目录。
+
+## 安装包安全加固（2026-07-14）
+
+- `package_installer.ps1` 与安装后烟测现在统一排除 SQLite WAL/SHM、`preferences.ini`、`restore_request.txt` 和备份/快照路径；阶段自测覆盖这些运行时数据，以及阶段目录中的 junction 外部目标不得被清理。
+- 阶段自测不再借助子 PowerShell 进程判断失败：该包装器会吞掉终止异常并错误返回成功。现已改为直接捕获打包脚本异常；回归复现后，三个安装包安全自测均再次通过。
+- 阶段目录删除会在删除前重新验证，并逐项以不穿越 reparse point 的方式删除；CI 在任何打包步骤前依次运行三个安装包安全自测。
+- 若烟测创建了 `%LOCALAPPDATA%\Forest` 与 sentinel，会在卸载后的保留断言之后仅删除该测试创建的 sentinel 和空目录；既有 LocalAppData 数据绝不修改。
+- 已执行并通过三个 PowerShell 安全自测：`installer_stage_selftest.ps1`、`installer_smoketest_selftest.ps1` 和 `installer_smoketest_ancestor_selftest.ps1`。本轮未执行 NSIS 或 Qt 构建/安装包验证，不能将这些自测等同于完整发布验证。
+
+## 安装包 CI 与本地发布验证（2026-07-14）
+
+- Windows CI 现会在便携包烟测后安装 NSIS、构建 `release/ForestFocus_Setup.exe` 并运行安装器烟测；无论结果如何都会上传安装器、`artifacts/*.sha256` 和 `artifacts/installer-smoke.log`，以及既有 UI 截图、CTest 日志和便携 ZIP。
+- 规范发布入口已统一为源码根目录的 `installer/forest_installer.nsi`、`scripts/package_installer.ps1` 和 `scripts/installer_smoketest.ps1`；发布清单要求审阅两个 SHA-256 文件和安装器烟测日志。
+- 本轮本地结果：`scripts/installer_stage_selftest.ps1` 退出码为 0。`build-architecture-upgrade` 在该 worktree 中不存在，因此 Release 构建和 CTest 均未启动（两条命令均退出码 1，CTest 没有测试结果）。`package_installer.ps1 -BuildDir build-architecture-upgrade -NoBuild` 退出码为 1，原因是本机没有 `windeployqt`；同时未找到 `makensis.exe`。因此没有生成便携 ZIP 或安装器，`artifacts/forest_portable.sha256` 与 `artifacts/ForestFocus_Setup.sha256` 均无本轮值。
+- 安装器烟测命令退出码为 1，唯一原因是 `release/ForestFocus_Setup.exe` 不存在；它在创建或检查 LocalAppData sentinel 之前失败，因此未运行用户数据 sentinel 验证。尚未触发远程 CI，故没有可记录的工作流 URL、结果或下载产物审阅结论。
+
 ## 发布与质量基线（2026-07-14）
 
 - 已批准“可复现安装包发布流水线”设计，详见 `project_docs/release-installer-design.md`。实现位于待合并的 `release-installer-pipeline` 分支，范围为规范化源码内安装脚本、以便携包为唯一安装输入、NSIS 安装/启动/卸载烟雾测试和 CI 工件；明确不包含自动发布、代码签名或产品功能改动。
@@ -142,3 +164,11 @@
 
 - 下一次源码修改前，先确认 `build-architecture-upgrade` 是否仍可用；如需干净配置，使用独立构建目录并显式提供 Qt 路径。
 - 对架构、持久化或 UI 的重大改动，完成后记录实际变更、运行的验证和仍存风险；长期规则变化才同步 `AGENT.md`。
+
+## 安装包发布流水线验证（2026-07-14）
+
+- 发布分支 `release-installer-pipeline` 已完成真实本机和 GitHub Actions 验证。最终 CI：<https://github.com/shayebushianie/forest_self/actions/runs/29345793967>，推送与 PR 触发均成功。
+- CI 通过 Release 构建、6 项 CTest、三项安装安全回归、便携包启动检查、NSIS 安装包构建，以及静默安装、应用启动、禁止运行时数据检查和静默卸载。
+- CI 工件已复核：`ForestFocus_Setup.exe` SHA-256 为 `40776CC9856925E15AE378248192BD120A4F0AA993671CEBF37E22AED82F2D07`；`forest_portable.zip` SHA-256 为 `01D2D04BB8F021E1797BDC3E0583B453915A74DFC2052DBE5B0F5B34B63A3C08`。安装烟雾日志以 `FINAL: PASS` 结束。
+- 已人工复核 CI 生成的 1366x768、1440x900、1920x1080 首页和森林页截图：核心控件与森林统计头部均在可见区域。UI 烟雾测试改为按实际紧凑布局计算挑战签到的点击位置，并持续关闭仅用于测试的标准消息框，以消除 CI DPI/时序导致的假失败。
+- 后续发布时，将 CI 工件中的安装包与便携包及各自 `.sha256` 上传到 GitHub Release；不要上传运行数据、日志、构建目录或 Qt SDK。

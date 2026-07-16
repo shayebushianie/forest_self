@@ -13,18 +13,47 @@ jobs:
         with:
           version: '6.5.3'
           arch: 'win64_mingw'
-      - uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
+      - name: Install MinGW
+        shell: pwsh
+        run: |
+          choco install mingw --yes --no-progress
+          $mingwBin = 'C:\ProgramData\mingw64\mingw64\bin'
+          if (-not (Test-Path -LiteralPath (Join-Path $mingwBin 'g++.exe'))) {
+            throw "MinGW compiler was not installed at $mingwBin"
+          }
+          $mingwBin | Add-Content -LiteralPath $env:GITHUB_PATH -Encoding utf8
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Installer stage safety self-test
+        shell: pwsh
+        run: ./scripts/installer_stage_selftest.ps1
+      - name: Installer smoke safety self-test
+        shell: pwsh
+        run: ./scripts/installer_smoketest_selftest.ps1
+      - name: Installer smoke ancestor safety self-test
+        shell: pwsh
+        run: ./scripts/installer_smoketest_ancestor_selftest.ps1
       - name: Package smoke test
         shell: pwsh
         run: ./scripts/package_portable.ps1 -BuildDir build -SmokeTest
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+      - name: Package installer
+        shell: pwsh
+        run: >-
+          ./scripts/package_installer.ps1 -BuildDir build
+          -NsisCompiler "${env:ProgramFiles(x86)}\NSIS\makensis.exe" -NoBuild
+      - name: Installer smoke test
+        shell: pwsh
+        run: >-
+          ./scripts/installer_smoketest.ps1
+          -Installer ./release/ForestFocus_Setup.exe
+          -InstallDir "${env:RUNNER_TEMP}\forest-installer-smoke"
       - name: Upload QA artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -33,5 +62,9 @@ jobs:
           if-no-files-found: warn
           path: |
             build/ui-fullscreen-snapshots/**
+            build/ui-smoketest.log
             build/Testing/Temporary/LastTest.log
             artifacts/**/*.zip
+            release/ForestFocus_Setup.exe
+            artifacts/*.sha256
+            artifacts/installer-smoke.log

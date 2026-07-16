@@ -19,7 +19,7 @@
 - 完整测试：`ctest --test-dir <build-dir> --output-on-failure`。当前 CMake 注册六项测试：storage、focus resilience、user security、plant catalog、statistics、UI smoke。
 - 不得把机器绝对路径写入 CMake 或打包脚本；Qt 仅可通过 `-QtDir`、CMake 缓存或环境变量定位。
 - 成功构建后才可部署：复制构建输出的 `forest.exe` 到工作区根目录，并进行短暂启动烟雾测试。修改安装脚本后，还要在临时自定义目录完成安装、启动与卸载验证。
-- Windows 安装包由 `installer/forest_installer.nsi` 和 `installer/build_installer.ps1` 生成，输出 `release/ForestFocus_Setup.exe`。
+- Windows 安装包的规范发布入口是源码根目录的 `installer/forest_installer.nsi`、`scripts/package_installer.ps1` 和 `scripts/installer_smoketest.ps1`，输出 `release/ForestFocus_Setup.exe`；安装包绝不打包或删除用户数据。
 
 ## 代码与文档风格
 
