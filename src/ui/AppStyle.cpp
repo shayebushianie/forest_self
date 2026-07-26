@@ -1,43 +1,92 @@
 ﻿#include "ui/AppStyle.h"
 
-#include <QAbstractButton>
 #include <QApplication>
-#include <QComboBox>
 #include <QEvent>
-#include <QGraphicsOpacityEffect>
-#include <QLineEdit>
-#include <QPropertyAnimation>
-#include <QSpinBox>
+#include <QFocusEvent>
+#include <QKeyEvent>
+#include <QStyle>
 #include <QWidget>
 
 namespace {
 
-class SmoothInteractionFilter : public QObject {
+constexpr auto kKeyboardFocusProperty = "keyboardFocusVisible";
+constexpr auto kFocusVisibilityInstalledProperty = "_forestFocusVisibilityInstalled";
+
+bool isKeyboardNavigationKey(int key)
+{
+    switch (key) {
+    case Qt::Key_Tab:
+    case Qt::Key_Backtab:
+    case Qt::Key_Left:
+    case Qt::Key_Right:
+    case Qt::Key_Up:
+    case Qt::Key_Down:
+    case Qt::Key_PageUp:
+    case Qt::Key_PageDown:
+    case Qt::Key_Home:
+    case Qt::Key_End:
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+    case Qt::Key_Space:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void setKeyboardFocusProperty(QWidget* widget, bool visible)
+{
+    if (!widget || widget->property(kKeyboardFocusProperty).toBool() == visible) return;
+    widget->setProperty(kKeyboardFocusProperty, visible);
+    if (widget->style()) {
+        widget->style()->unpolish(widget);
+        widget->style()->polish(widget);
+    }
+    widget->update();
+    if (widget->parentWidget())
+        widget->parentWidget()->update(widget->geometry().adjusted(-6, -6, 6, 6));
+}
+
+class FocusVisibilityFilter final : public QObject {
 public:
-    explicit SmoothInteractionFilter(QObject* parent = nullptr) : QObject(parent) {}
+    explicit FocusVisibilityFilter(QApplication& application)
+        : QObject(&application),
+          application_(application)
+    {
+    }
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
-        auto* widget = qobject_cast<QWidget*>(watched);
-        if (!widget || !widget->isEnabled() || !isInteractive(widget)) {
-            return QObject::eventFilter(watched, event);
-        }
-
         switch (event->type()) {
-        case QEvent::Enter:
-        case QEvent::FocusIn:
-            animateOpacity(widget, 1.0, 120);
-            break;
         case QEvent::MouseButtonPress:
-            animateOpacity(widget, 0.86, 70);
+        case QEvent::TouchBegin:
+        case QEvent::TabletPress:
+            keyboardMode_ = false;
+            setKeyboardFocusProperty(application_.focusWidget(), false);
             break;
-        case QEvent::MouseButtonRelease:
-            animateOpacity(widget, 1.0, 120);
+        case QEvent::KeyPress:
+            if (isKeyboardNavigationKey(static_cast<QKeyEvent*>(event)->key())) {
+                keyboardMode_ = true;
+                QWidget* target = application_.focusWidget();
+                if (!target) target = qobject_cast<QWidget*>(watched);
+                setKeyboardFocusProperty(target, true);
+            }
             break;
-        case QEvent::Leave:
+        case QEvent::FocusIn:
+            if (auto* widget = qobject_cast<QWidget*>(watched)) {
+                const auto reason = static_cast<QFocusEvent*>(event)->reason();
+                const bool visible = reason == Qt::TabFocusReason
+                    || reason == Qt::BacktabFocusReason
+                    || reason == Qt::ShortcutFocusReason
+                    || (reason != Qt::MouseFocusReason && keyboardMode_);
+                if (reason == Qt::MouseFocusReason) keyboardMode_ = false;
+                if (visible) keyboardMode_ = true;
+                setKeyboardFocusProperty(widget, visible);
+            }
+            break;
         case QEvent::FocusOut:
-            animateOpacity(widget, 0.94, 160);
+            setKeyboardFocusProperty(qobject_cast<QWidget*>(watched), false);
             break;
         default:
             break;
@@ -46,52 +95,40 @@ protected:
     }
 
 private:
-    static bool isInteractive(QWidget* widget)
-    {
-        return qobject_cast<QAbstractButton*>(widget) ||
-               qobject_cast<QComboBox*>(widget) ||
-               qobject_cast<QSpinBox*>(widget) ||
-               qobject_cast<QLineEdit*>(widget);
-    }
-
-    static void animateOpacity(QWidget* widget, qreal target, int duration)
-    {
-        auto* effect = qobject_cast<QGraphicsOpacityEffect*>(widget->graphicsEffect());
-        if (!effect) {
-            if (widget->graphicsEffect()) return;
-            effect = new QGraphicsOpacityEffect(widget);
-            effect->setOpacity(0.94);
-            widget->setGraphicsEffect(effect);
-        }
-
-        auto* previous = effect->findChild<QPropertyAnimation*>("smoothOpacityAnimation");
-        if (previous) {
-            previous->stop();
-            previous->deleteLater();
-        }
-
-        auto* anim = new QPropertyAnimation(effect, "opacity", effect);
-        anim->setObjectName("smoothOpacityAnimation");
-        anim->setDuration(duration);
-        anim->setStartValue(effect->opacity());
-        anim->setEndValue(target);
-        anim->setEasingCurve(QEasingCurve::OutCubic);
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
-    }
+    QApplication& application_;
+    bool keyboardMode_ = false;
 };
 
 } // namespace
 
-QString AppStyle::styleSheet()
+void AppStyle::installFocusVisibility(QApplication& application)
 {
-    return QStringLiteral(R"(
+    if (application.property(kFocusVisibilityInstalledProperty).toBool()) return;
+    application.setProperty(kFocusVisibilityInstalledProperty, true);
+    application.installEventFilter(new FocusVisibilityFilter(application));
+}
+
+bool AppStyle::keyboardFocusVisible(const QWidget* widget)
+{
+    return widget && widget->hasFocus() && widget->property(kKeyboardFocusProperty).toBool();
+}
+
+QString AppStyle::styleSheet(int fontScalePercent, bool highContrast)
+{
+    const int baseFontPx = qMax(11, qRound(14.0 * fontScalePercent / 100.0));
+    const int settingDescriptionPx = qMax(10, qRound(12.0 * fontScalePercent / 100.0));
+    const int settingsTitlePx = qMax(24, qRound(30.0 * fontScalePercent / 100.0));
+    QString rules = QStringLiteral(R"(
         QWidget {
             background-color: #58AD8F;
             color: #F7FFF7;
             font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-            font-size: 14px;
+            font-size: __BASE_FONT_PX__px;
             selection-background-color: #D9E46B;
             selection-color: #244538;
+        }
+        QAbstractItemView, QRadioButton, QCheckBox {
+            outline: none;
         }
         QDialog, QMessageBox {
             background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
@@ -133,8 +170,8 @@ QString AppStyle::styleSheet()
             border: 1px solid rgba(255, 255, 255, 52);
             border-radius: 8px;
         }
-        QLabel[settingTitle="true"] { font-size: 14px; font-weight: 800; color: #F7FFF7; }
-        QLabel[settingDescription="true"] { font-size: 12px; color: rgba(247,255,247,180); }
+        QLabel[settingTitle="true"] { font-size: __BASE_FONT_PX__px; font-weight: 800; color: #F7FFF7; }
+        QLabel[settingDescription="true"] { font-size: __SETTING_DESC_PX__px; color: rgba(247,255,247,180); }
         QLabel {
             background: transparent;
             border: none;
@@ -159,8 +196,9 @@ QString AppStyle::styleSheet()
             padding-top: 9px;
             padding-bottom: 7px;
         }
-        QPushButton:focus {
-            border-color: #F2F4C6;
+        QPushButton[keyboardFocusVisible="true"] {
+            background-color: rgba(255, 255, 255, 78);
+            color: #FFFFFF;
         }
         QPushButton:disabled {
             background-color: rgba(51, 103, 86, 80);
@@ -214,8 +252,13 @@ QString AppStyle::styleSheet()
             background-color: rgba(255, 255, 255, 60);
         }
         QComboBox:focus, QSpinBox:focus, QLineEdit:focus {
-            border-color: #D9E46B;
             background-color: rgba(255, 255, 255, 78);
+        }
+        QComboBox[keyboardFocusVisible="true"],
+        QSpinBox[keyboardFocusVisible="true"],
+        QLineEdit[keyboardFocusVisible="true"] {
+            background-color: rgba(255, 255, 255, 92);
+            color: #FFFFFF;
         }
         QDialog QComboBox, QDialog QSpinBox, QDialog QLineEdit, QDialog QListWidget {
             background-color: #FAFBE7;
@@ -235,7 +278,12 @@ QString AppStyle::styleSheet()
         }
         QDialog QComboBox:focus, QDialog QSpinBox:focus, QDialog QLineEdit:focus {
             background-color: #FFFFFF;
-            border-color: #357A5B;
+        }
+        QDialog QComboBox[keyboardFocusVisible="true"],
+        QDialog QSpinBox[keyboardFocusVisible="true"],
+        QDialog QLineEdit[keyboardFocusVisible="true"] {
+            background-color: #F3F8D8;
+            color: #173F33;
         }
         QDialog QPushButton {
             background-color: #E7EDB8;
@@ -293,23 +341,178 @@ QString AppStyle::styleSheet()
             background-color: #D9E46B;
             color: #244538;
         }
+        QWidget#settingsPage {
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                        stop:0 #6BB197, stop:0.62 #4F9B80, stop:1 #3F856E);
+        }
+        QWidget[settingsTransparent="true"] {
+            background: transparent;
+        }
+        QFrame#settingsGlassShell,
+        QWidget#settingsRail,
+        QFrame#settingsContentPanel,
+        QStackedWidget#settingsCategoryStack,
+        QWidget#settingsPage QScrollArea,
+        QWidget#settingsPage QScrollArea QWidget#qt_scrollarea_viewport,
+        QWidget#focusSettingsContent,
+        QWidget#rulesSettingsContent,
+        QWidget#appearanceSettingsContent,
+        QWidget#dataSettingsContent {
+            background-color: #D5EBDD;
+        }
+        QFrame#settingsGlassShell {
+            border: 1px solid rgba(236,250,240,185);
+            border-radius: 22px;
+        }
+        QWidget#settingsRail {
+            background: transparent;
+            border: none;
+        }
+        QLabel[settingsRailTitle="true"] {
+            color: #204F3E;
+            font-size: __SETTINGS_RAIL_TITLE_PX__px;
+            font-weight: 800;
+            padding: 0 8px 10px 8px;
+        }
+        QFrame#settingsContentPanel {
+            background: transparent;
+            border: none;
+        }
+        QStackedWidget#settingsCategoryStack {
+            background: transparent;
+            border: none;
+        }
         QListWidget#settingsCategoryNav {
-            background-color: rgba(23, 86, 67, 96);
-            border: 1px solid rgba(255,255,255,62);
-            border-radius: 10px;
-            padding: 8px;
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 0;
         }
         QListWidget#settingsCategoryNav::item {
-            min-height: 32px;
-            padding: 10px 12px;
-            margin: 2px 0;
-            color: rgba(247,255,247,210);
+            min-height: 38px;
+            padding: 8px 11px;
+            margin: 3px 0;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: #315E4D;
             font-weight: 700;
         }
-        QListWidget#settingsCategoryNav::item:hover { background-color: rgba(255,255,255,34); }
+        QListWidget#settingsCategoryNav::item:hover {
+            background-color: rgba(74,132,103,22);
+        }
         QListWidget#settingsCategoryNav::item:selected {
-            background-color: #F2F4C6;
-            color: #245543;
+            background-color: rgba(70,137,103,36);
+            border-left: 3px solid #4A8768;
+            color: #173F33;
+        }
+        QListWidget#settingsCategoryNav[keyboardFocusVisible="true"]::item:selected {
+            border-left: 3px solid #D4B844;
+        }
+        QWidget#settingsPage QScrollArea,
+        QWidget#settingsPage QScrollArea > QWidget > QWidget {
+            border: none;
+        }
+        QLabel[settingsPageTitle="true"] {
+            color: #173F33;
+            font-size: __SETTINGS_TITLE_PX__px;
+            font-weight: 800;
+        }
+        QLabel[settingsPageDescription="true"] {
+            color: rgba(30,73,58,170);
+            font-size: __BASE_FONT_PX__px;
+        }
+        QLabel[settingsSectionLabel="true"] {
+            color: #2C6D54;
+            font-size: __SETTING_DESC_PX__px;
+            font-weight: 800;
+            padding: 5px 4px 2px 4px;
+        }
+        QFrame[settingsListGroup="true"] {
+            background: transparent;
+            border: none;
+        }
+        QWidget[settingsRow="true"] {
+            background: transparent;
+            border: none;
+        }
+        QFrame[settingsSeparator="true"] {
+            background-color: rgba(42,94,74,42);
+            border: none;
+            margin-left: 4px;
+            margin-right: 4px;
+        }
+        QLabel[settingsRowTitle="true"] {
+            color: #173F33;
+            font-size: __BASE_FONT_PX__px;
+            font-weight: 750;
+        }
+        QLabel[settingsRowDescription="true"] {
+            color: rgba(35,76,62,155);
+            font-size: __SETTING_DESC_PX__px;
+        }
+        QLabel#settingsDataSummary {
+            color: #315C49;
+            font-size: __BASE_FONT_PX__px;
+        }
+        QWidget#settingsPage QComboBox,
+        QWidget#settingsPage QSpinBox,
+        QWidget#settingsPage QLineEdit {
+            background-color: rgba(255,255,255,105);
+            color: #214E3E;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            padding: 7px 10px;
+            min-height: 22px;
+        }
+        QWidget#settingsPage QComboBox:hover,
+        QWidget#settingsPage QSpinBox:hover,
+        QWidget#settingsPage QLineEdit:hover {
+            border-color: rgba(74,135,103,90);
+            background-color: rgba(255,255,255,155);
+        }
+        QWidget#settingsPage QComboBox:focus,
+        QWidget#settingsPage QSpinBox:focus,
+        QWidget#settingsPage QLineEdit:focus {
+            background-color: rgba(255,255,255,155);
+        }
+        QWidget#settingsPage QComboBox[keyboardFocusVisible="true"],
+        QWidget#settingsPage QSpinBox[keyboardFocusVisible="true"],
+        QWidget#settingsPage QLineEdit[keyboardFocusVisible="true"] {
+            background-color: rgba(242,247,211,210);
+            color: #173F33;
+        }
+        QWidget#settingsPage QListWidget#settingsBlacklistList {
+            background-color: rgba(255,255,255,82);
+            color: #244F40;
+            border: none;
+            border-radius: 14px;
+            padding: 8px;
+        }
+        QWidget#settingsPage QPushButton[settingsActionRow="true"] {
+            background: transparent;
+            color: #214E3E;
+            border: none;
+            border-radius: 11px;
+            padding: 13px 16px;
+            min-height: 42px;
+            text-align: left;
+            font-weight: 700;
+        }
+        QWidget#settingsPage QPushButton[settingsActionRow="true"]:hover {
+            background-color: rgba(80,145,111,25);
+            border: none;
+        }
+        QWidget#settingsPage QPushButton[settingsActionRow="true"]:pressed {
+            background-color: rgba(45,105,80,38);
+            padding-top: 14px;
+            padding-bottom: 12px;
+        }
+        QWidget#settingsPage QPushButton[settingsActionRow="true"][keyboardFocusVisible="true"] {
+            background-color: rgba(80,145,111,30);
+            border-left: 3px solid #D4B844;
+        }
+        QWidget#settingsPage QPushButton[dangerousAction="true"] {
+            color: #87483F;
         }
         QScrollArea {
             border: none;
@@ -348,9 +551,34 @@ QString AppStyle::styleSheet()
             color: #244538;
         }
     )");
-}
-
-void AppStyle::installSmoothInteractions(QApplication& app)
-{
-    app.installEventFilter(new SmoothInteractionFilter(&app));
+    rules.replace(QStringLiteral("__BASE_FONT_PX__"), QString::number(baseFontPx));
+    rules.replace(QStringLiteral("__SETTING_DESC_PX__"), QString::number(settingDescriptionPx));
+    rules.replace(QStringLiteral("__SETTINGS_TITLE_PX__"), QString::number(settingsTitlePx));
+    rules.replace(QStringLiteral("__SETTINGS_RAIL_TITLE_PX__"),
+                  QString::number(qMax(17, qRound(20.0 * fontScalePercent / 100.0))));
+    if (highContrast) {
+        const int focusWidth = fontScalePercent >= 110 ? 3 : 2;
+        rules += QStringLiteral(
+            "QPushButton, QComboBox, QSpinBox, QLineEdit, QCheckBox::indicator {"
+            " border:%1px solid #173F33; }"
+            "QPushButton[keyboardFocusVisible=\"true\"],"
+            " QComboBox[keyboardFocusVisible=\"true\"],"
+            " QSpinBox[keyboardFocusVisible=\"true\"],"
+            " QLineEdit[keyboardFocusVisible=\"true\"] {"
+            " background-color:#F2F4C6; color:#173F33; }"
+            "QCheckBox[keyboardFocusVisible=\"true\"],"
+            " QRadioButton[keyboardFocusVisible=\"true\"] { color:#8B6D08; }"
+            "QFrame[settingsListGroup=\"true\"] { background:transparent; border:none; }"
+            "QWidget#settingsRail, QFrame#settingsContentPanel,"
+            " QStackedWidget#settingsCategoryStack,"
+            " QWidget#settingsPage QScrollArea,"
+            " QWidget#settingsPage QScrollArea QWidget#qt_scrollarea_viewport,"
+            " QWidget#focusSettingsContent, QWidget#rulesSettingsContent,"
+            " QWidget#appearanceSettingsContent, QWidget#dataSettingsContent {"
+            " background-color:#DDEFE3; border:none; }"
+            "QFrame[settingsSeparator=\"true\"] { background-color:#315E4D; }"
+            "QFrame#settingsGlassShell { background-color:#DDEFE3; border:%1px solid #173F33; }")
+                     .arg(focusWidth);
+    }
+    return rules;
 }

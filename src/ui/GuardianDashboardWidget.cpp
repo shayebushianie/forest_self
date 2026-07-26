@@ -4,7 +4,9 @@
 
 #include <QConicalGradient>
 #include <QFontMetrics>
+#include <QHideEvent>
 #include <QLinearGradient>
+#include <QPropertyAnimation>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
@@ -41,16 +43,7 @@ GuardianDashboardWidget::GuardianDashboardWidget(QWidget* parent)
         if (!syncingGoalSpin_) emit dailyGoalChanged(value);
     });
 
-    connect(&animationTimer_, &QTimer::timeout, this, [this]() {
-        phase_ += 0.035;
-        if (phase_ > 10000.0) phase_ = 0.0;
-        shownProgress_ += (targetProgress_ - shownProgress_) * 0.08;
-        if (qAbs(shownProgress_ - targetProgress_) < 0.001) {
-            shownProgress_ = targetProgress_;
-        }
-        update();
-    });
-    animationTimer_.start(33);
+    setProperty("shownProgress", shownProgress_);
     syncGoalSpin();
 }
 
@@ -67,6 +60,36 @@ void GuardianDashboardWidget::setSnapshot(uint32_t todayMinutes,
     totalMinutes_ = totalMinutes;
     targetProgress_ = std::min<qreal>(1.0, static_cast<qreal>(todayMinutes_) / dailyGoalMinutes_);
     syncGoalSpin();
+    if (progressAnimation_) {
+        progressAnimation_->stop();
+        progressAnimation_->deleteLater();
+    }
+    if (reducedMotion_ || !isVisible() || qFuzzyCompare(shownProgress_, targetProgress_)) {
+        setShownProgress(targetProgress_);
+        return;
+    }
+    auto* animation = new QPropertyAnimation(this, "shownProgress", this);
+    progressAnimation_ = animation;
+    animation->setDuration(200);
+    animation->setStartValue(shownProgress_);
+    animation->setEndValue(targetProgress_);
+    animation->setEasingCurve(QEasingCurve::OutCubic);
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void GuardianDashboardWidget::setReducedMotion(bool reducedMotion)
+{
+    reducedMotion_ = reducedMotion;
+    if (reducedMotion_ && progressAnimation_) {
+        progressAnimation_->stop();
+        progressAnimation_->deleteLater();
+    }
+    if (reducedMotion_) setShownProgress(targetProgress_);
+}
+
+void GuardianDashboardWidget::setShownProgress(qreal progress)
+{
+    shownProgress_ = std::clamp(progress, 0.0, 1.0);
     update();
 }
 
@@ -89,6 +112,16 @@ void GuardianDashboardWidget::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
     syncGoalSpin();
+}
+
+void GuardianDashboardWidget::hideEvent(QHideEvent* event)
+{
+    if (progressAnimation_) {
+        progressAnimation_->stop();
+        progressAnimation_->deleteLater();
+    }
+    setShownProgress(targetProgress_);
+    QWidget::hideEvent(event);
 }
 
 GuardianDashboardWidget::LayoutRects GuardianDashboardWidget::calculateLayout() const
@@ -144,7 +177,7 @@ void GuardianDashboardWidget::drawBackground(QPainter& painter) const
 
     painter.setPen(QPen(QColor(255, 255, 255, 34), 1));
     for (int i = 0; i < 7; ++i) {
-        const qreal y = 90 + i * 82 + qSin(phase_ + i) * 4.0;
+        const qreal y = 90 + i * 82;
         QPainterPath path;
         path.moveTo(-20, y);
         path.cubicTo(width() * 0.25, y - 20, width() * 0.55, y + 22, width() + 20, y - 10);
@@ -152,11 +185,11 @@ void GuardianDashboardWidget::drawBackground(QPainter& painter) const
     }
 
     for (int i = 0; i < 12; ++i) {
-        const qreal x = std::fmod(i * 143.0 + phase_ * 22.0, width() + 60.0) - 30.0;
+        const qreal x = std::fmod(i * 143.0, width() + 60.0) - 30.0;
         const qreal y = 86.0 + std::fmod(i * 71.0, std::max<qreal>(120.0, height() - 140.0));
         painter.save();
-        painter.translate(x, y + qSin(phase_ * 1.4 + i) * 8.0);
-        painter.rotate(-28 + qSin(phase_ + i) * 12);
+        painter.translate(x, y);
+        painter.rotate(-28);
         painter.setBrush(QColor(247, 255, 247, 42));
         painter.setPen(Qt::NoPen);
         QPainterPath leaf;
@@ -200,7 +233,7 @@ void GuardianDashboardWidget::drawHero(QPainter& painter, const QRectF& rect) co
     const qreal ringSize = std::clamp(std::min(rect.height() * 0.66, rect.width() * 0.26), 130.0, 190.0);
     const QPointF center(rect.left() + ringSize * 0.58 + 42.0, rect.center().y() + 2.0);
     const QRectF ring(center.x() - ringSize / 2.0, center.y() - ringSize / 2.0, ringSize, ringSize);
-    const qreal pulse = 0.5 + 0.5 * qSin(phase_ * 2.0);
+    const qreal pulse = 0.5;
 
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(242, 244, 198, static_cast<int>(26 + pulse * 26)));
@@ -210,7 +243,7 @@ void GuardianDashboardWidget::drawHero(QPainter& painter, const QRectF& rect) co
     painter.setPen(track);
     painter.drawArc(ring.adjusted(12, 12, -12, -12), 90 * 16, -360 * 16);
 
-    QConicalGradient arcGrad(center, -90 + phase_ * 24.0);
+    QConicalGradient arcGrad(center, -90);
     arcGrad.setColorAt(0.0, QColor("#F2F4C6"));
     arcGrad.setColorAt(0.55, QColor("#72D7B2"));
     arcGrad.setColorAt(1.0, QColor("#F2F4C6"));
@@ -258,7 +291,7 @@ void GuardianDashboardWidget::drawHero(QPainter& painter, const QRectF& rect) co
     painter.setBrush(fill);
     painter.drawRoundedRect(QRectF(vine.left(), vine.top(), fillW, vine.height()), 9, 9);
     painter.setBrush(QColor(255, 255, 255, 70));
-    const qreal shineX = vine.left() + std::fmod(phase_ * 80.0, vine.width() + 60.0) - 60.0;
+    const qreal shineX = vine.left() + vine.width() * 0.28;
     painter.drawRoundedRect(QRectF(shineX, vine.top() + 3, 54, vine.height() - 6), 7, 7);
 }
 
@@ -266,10 +299,15 @@ void GuardianDashboardWidget::drawPlantIcon(QPainter& painter, const QRectF& rec
 {
     painter.save();
     if (!plantIcon_.isNull()) {
-        const QPixmap scaled = plantIcon_.scaled(rect.size().toSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        const QPointF topLeft(rect.center().x() - scaled.width() / 2.0,
-                              rect.center().y() - scaled.height() / 2.0);
-        painter.drawPixmap(topLeft, scaled);
+        const QSize requestedSize = rect.size().toSize();
+        if (scaledPlantIcon_.isNull() || scaledPlantSize_ != requestedSize) {
+            scaledPlantIcon_ = plantIcon_.scaled(requestedSize, Qt::KeepAspectRatio,
+                                                 Qt::SmoothTransformation);
+            scaledPlantSize_ = requestedSize;
+        }
+        const QPointF topLeft(rect.center().x() - scaledPlantIcon_.width() / 2.0,
+                              rect.center().y() - scaledPlantIcon_.height() / 2.0);
+        painter.drawPixmap(topLeft, scaledPlantIcon_);
     } else {
         const QIcon icon = style()->standardIcon(QStyle::SP_DialogApplyButton);
         icon.paint(&painter, rect.toRect(), Qt::AlignCenter);
@@ -306,7 +344,7 @@ void GuardianDashboardWidget::drawGoalCard(QPainter& painter, const QRectF& rect
     for (int i = 0; i < 5; ++i) {
         const bool active = shownProgress_ >= (i + 1) / 5.0;
         painter.setBrush(active ? QColor("#F2F4C6") : QColor(247, 255, 247, 82));
-        const qreal y = rect.center().y() + qSin(phase_ + i * 0.7) * 2.0;
+        const qreal y = rect.center().y();
         painter.drawEllipse(QPointF(x0 + i * stepGap, y), active ? 8 : 6, active ? 8 : 6);
     }
     painter.setPen(QPen(QColor(247, 255, 247, 68), 2, Qt::SolidLine, Qt::RoundCap));
@@ -331,7 +369,7 @@ void GuardianDashboardWidget::drawTimeline(QPainter& painter, const QRectF& rect
     painter.drawLine(QPointF(lane.left(), lane.center().y()), QPointF(lane.right(), lane.center().y()));
     for (int i = 0; i < days; ++i) {
         const bool active = i >= days - std::min<int>(days, static_cast<int>(currentStreak_));
-        const QPointF p(lane.left() + gap * i, lane.center().y() + qSin(phase_ * 1.8 + i) * 3.0);
+        const QPointF p(lane.left() + gap * i, lane.center().y());
         painter.setPen(Qt::NoPen);
         painter.setBrush(active ? QColor("#F2F4C6") : QColor(247, 255, 247, 90));
         painter.drawEllipse(p, active ? 11 : 8, active ? 11 : 8);

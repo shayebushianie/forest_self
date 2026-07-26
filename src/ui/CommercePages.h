@@ -5,7 +5,9 @@
 
 class QWidget;
 class QVBoxLayout;
+class QGridLayout;
 class QLabel;
+class GachaDigSiteWidget;
 class CoinManager;
 class AchievementEngine;
 class FocusResultService;
@@ -60,10 +62,11 @@ private:
     QWidget* page_ = nullptr;
     QLabel* coinLabel_ = nullptr;
     QLabel* refundLabel_ = nullptr;
-    QLabel* resultIcon_ = nullptr;
+    QLabel* collectionProgress_ = nullptr;
     QLabel* resultTitle_ = nullptr;
     QLabel* resultDescription_ = nullptr;
-    QVBoxLayout* variantsLayout_ = nullptr;
+    GachaDigSiteWidget* digSite_ = nullptr;
+    QGridLayout* variantsLayout_ = nullptr;
 };
 
 #endif // COMMERCE_PAGES_H

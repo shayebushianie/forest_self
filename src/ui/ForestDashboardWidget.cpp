@@ -1,17 +1,21 @@
 ﻿#include "ui/ForestDashboardWidget.h"
+#include "ui/AppStyle.h"
 #include "ui/PlantImageUtils.h"
+#include "ui/PaintedActionButton.h"
 #include "config/PlantCatalog.h"
 
 #include <QDateTime>
+#include <QEvent>
 #include <QFontMetrics>
 #include <QImage>
 #include <QLinearGradient>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPolygonF>
 #include <QMap>
+#include <QResizeEvent>
 #include <QSet>
+#include <QToolButton>
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -45,6 +49,37 @@ qreal normalizedHash(uint32_t seed)
     return static_cast<qreal>(seed % 10000) / 10000.0;
 }
 
+QRect opaqueBounds(const QPixmap& pixmap)
+{
+    const QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+    int left = image.width();
+    int top = image.height();
+    int right = -1;
+    int bottom = -1;
+    for (int y = 0; y < image.height(); ++y) {
+        const auto* line = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+        for (int x = 0; x < image.width(); ++x) {
+            if (qAlpha(line[x]) == 0) continue;
+            left = std::min(left, x);
+            top = std::min(top, y);
+            right = std::max(right, x);
+            bottom = std::max(bottom, y);
+        }
+    }
+    return right >= left && bottom >= top
+        ? QRect(QPoint(left, top), QPoint(right, bottom))
+        : QRect();
+}
+
+QRect centeredMinimumRect(const QRect& rect, int minimumWidth, int minimumHeight)
+{
+    const QSize targetSize(std::max(rect.width(), minimumWidth),
+                           std::max(rect.height(), minimumHeight));
+    QRect target(QPoint(), targetSize);
+    target.moveCenter(rect.center());
+    return target;
+}
+
 }
 
 ForestDashboardWidget::ForestDashboardWidget(QWidget* parent)
@@ -52,7 +87,33 @@ ForestDashboardWidget::ForestDashboardWidget(QWidget* parent)
 {
     setMinimumSize(900, 720);
     setAttribute(Qt::WA_StyledBackground, true);
-    setMouseTracking(true);
+    setProperty("forestStaticRenderGeneration", QVariant::fromValue<qulonglong>(0));
+
+    const QStringList keys = {QStringLiteral("forestOverviewAction"), QStringLiteral("forestPeriodDayAction"),
+                              QStringLiteral("forestPeriodWeekAction"), QStringLiteral("forestPeriodMonthAction"),
+                              QStringLiteral("forestPeriodYearAction"), QStringLiteral("forestPreviousDateAction"),
+                              QStringLiteral("forestNextDateAction"), QStringLiteral("forestFilterAction"),
+                              QStringLiteral("forestSettingsAction")};
+    for (const QString& key : keys) actionButton(key, key, key);
+    connect(actionButtons_.value(QStringLiteral("forestOverviewAction")), &QToolButton::clicked,
+            this, &ForestDashboardWidget::overviewRequested);
+    const QStringList periodKeys = {QStringLiteral("forestPeriodDayAction"), QStringLiteral("forestPeriodWeekAction"),
+                                    QStringLiteral("forestPeriodMonthAction"), QStringLiteral("forestPeriodYearAction")};
+    for (int i = 0; i < periodKeys.size(); ++i) {
+        connect(actionButtons_.value(periodKeys[i]), &QToolButton::clicked, this, [this, i] {
+            periodMode_ = static_cast<PeriodMode>(i);
+            cachedData_.reset();
+            invalidateStaticLayer();
+        });
+    }
+    connect(actionButtons_.value(QStringLiteral("forestPreviousDateAction")), &QToolButton::clicked,
+            this, [this] { changeSelectedDate(-1); });
+    connect(actionButtons_.value(QStringLiteral("forestNextDateAction")), &QToolButton::clicked,
+            this, [this] { changeSelectedDate(1); });
+    connect(actionButtons_.value(QStringLiteral("forestFilterAction")), &QToolButton::clicked,
+            this, &ForestDashboardWidget::filtersRequested);
+    connect(actionButtons_.value(QStringLiteral("forestSettingsAction")), &QToolButton::clicked,
+            this, &ForestDashboardWidget::settingsRequested);
 }
 
 void ForestDashboardWidget::setRecords(std::vector<FocusRecord> records)
@@ -79,80 +140,129 @@ void ForestDashboardWidget::setRecordFilter(const RecordFilter& filter)
     }
     statisticsIndex_.rebuild(records_);
     cachedData_.reset();
-    update();
+    invalidateStaticLayer();
 }
 
 void ForestDashboardWidget::setTagNames(const QMap<uint32_t, QString>& tagNames)
 {
     tagNames_ = tagNames;
     cachedData_.reset();
-    update();
+    invalidateStaticLayer();
 }
 
-void ForestDashboardWidget::mousePressEvent(QMouseEvent* event)
+bool ForestDashboardWidget::eventFilter(QObject* watched, QEvent* event)
 {
-    const QPointF pos = event->position();
-    for (auto it = islandPlantHitRects_.crbegin(); it != islandPlantHitRects_.crend(); ++it) {
-        if (it->first.contains(pos)) {
-            emit focusRecordRequested(it->second);
-            return;
+    if (actionButtons_.values().contains(qobject_cast<QToolButton*>(watched))) {
+        switch (event->type()) {
+        case QEvent::Enter:
+        case QEvent::Leave:
+        case QEvent::FocusIn:
+        case QEvent::FocusOut:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+            if (auto* button = qobject_cast<QToolButton*>(watched)) {
+                update(button->geometry().adjusted(-6, -6, 6, 6));
+            }
+            break;
+        default:
+            break;
         }
     }
-    for (int i = 0; i < periodTabRects_.size(); ++i) {
-        if (!periodTabRects_[i].contains(pos)) continue;
-        periodMode_ = static_cast<PeriodMode>(i);
-        cachedData_.reset();
-        update();
-        return;
-    }
-    if (prevDateRect_.contains(pos)) {
-        switch (periodMode_) {
-        case PeriodMode::Day: selectedDate_ = selectedDate_.addDays(-1); break;
-        case PeriodMode::Week: selectedDate_ = selectedDate_.addDays(-7); break;
-        case PeriodMode::Month: selectedDate_ = selectedDate_.addMonths(-1); break;
-        case PeriodMode::Year: selectedDate_ = selectedDate_.addYears(-1); break;
-        }
-        cachedData_.reset();
-        update();
-        return;
-    }
-    if (nextDateRect_.contains(pos)) {
-        switch (periodMode_) {
-        case PeriodMode::Day: selectedDate_ = selectedDate_.addDays(1); break;
-        case PeriodMode::Week: selectedDate_ = selectedDate_.addDays(7); break;
-        case PeriodMode::Month: selectedDate_ = selectedDate_.addMonths(1); break;
-        case PeriodMode::Year: selectedDate_ = selectedDate_.addYears(1); break;
-        }
-        cachedData_.reset();
-        update();
-        return;
-    }
-    if (settingsRect_.contains(pos)) {
-        emit settingsRequested();
-        return;
-    }
-    if (overviewRect_.contains(pos)) {
-        emit overviewRequested();
-        return;
-    }
-    if (filtersRect_.contains(pos)) {
-        emit filtersRequested();
-        return;
-    }
-    QWidget::mousePressEvent(event);
+    return QWidget::eventFilter(watched, event);
 }
 
-void ForestDashboardWidget::mouseMoveEvent(QMouseEvent* event)
+QToolButton* ForestDashboardWidget::actionButton(const QString& key, const QString& accessibleName,
+                                                  const QString& tooltip)
 {
-    const QPointF pos = event->position();
-    const bool onPlant = std::any_of(islandPlantHitRects_.cbegin(), islandPlantHitRects_.cend(),
-        [&pos](const auto& hit) { return hit.first.contains(pos); });
-    const bool onAction = overviewRect_.contains(pos) || filtersRect_.contains(pos) ||
-        settingsRect_.contains(pos) ||
-        std::any_of(periodTabRects_.cbegin(), periodTabRects_.cend(),
-                    [&pos](const QRectF& rect) { return rect.contains(pos); });
-    setCursor(onPlant || onAction ? Qt::PointingHandCursor : Qt::ArrowCursor);
-    QWidget::mouseMoveEvent(event);
+    if (QToolButton* existing = actionButtons_.value(key)) return existing;
+    auto* button = new PaintedActionButton(this);
+    button->setObjectName(key);
+    button->setAccessibleName(accessibleName);
+    button->setToolTip(tooltip);
+    button->setFocusPolicy(Qt::StrongFocus);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setAutoRaise(true);
+    button->setStyleSheet(QStringLiteral("QToolButton { background: transparent; border: 0; }"));
+    button->setVisible(false);
+    button->installEventFilter(this);
+    actionButtons_.insert(key, button);
+    return button;
+}
+
+void ForestDashboardWidget::syncActionButton(const QString& key, const QRectF& rect,
+                                              const QString& accessibleName, const QString& tooltip)
+{
+    QToolButton* button = actionButton(key, accessibleName, tooltip);
+    button->setAccessibleName(accessibleName);
+    button->setToolTip(tooltip);
+    button->setGeometry(rect.toAlignedRect());
+    button->show();
+}
+
+void ForestDashboardWidget::syncPlantButtons()
+{
+    QSet<QString> active;
+    for (const PlantHitRegion& region : islandPlantHitRegions_) {
+        const QString key = QStringLiteral("forestPlantRecord_%1").arg(region.recordId);
+        active.insert(key);
+        const bool isNew = !actionButtons_.contains(key);
+        QToolButton* button = actionButton(key, QStringLiteral("专注记录 %1").arg(region.recordId),
+                                           QStringLiteral("查看此次专注记录"));
+        if (isNew) {
+            const uint32_t recordId = region.recordId;
+            connect(button, &QToolButton::clicked, this, [this, recordId] { emit focusRecordRequested(recordId); });
+        }
+        if (button->geometry() != region.hitRect) button->setGeometry(region.hitRect);
+        button->setProperty("forestPlantDrawRect", region.drawRect);
+        button->setProperty("forestFeedbackRect", region.feedbackRect);
+        button->show();
+        button->raise();
+    }
+    for (auto it = actionButtons_.cbegin(); it != actionButtons_.cend(); ++it) {
+        if (it.key().startsWith(QStringLiteral("forestPlantRecord_")) && !active.contains(it.key())) {
+            it.value()->hide();
+        }
+    }
+}
+
+void ForestDashboardWidget::drawActionStates(QPainter& painter) const
+{
+    painter.save();
+    for (QToolButton* button : actionButtons_) {
+        if (!button->isVisible()) continue;
+        const QVariant feedbackProperty = button->property("forestFeedbackRect");
+        const QRectF actionRect = feedbackProperty.isValid()
+            ? QRectF(feedbackProperty.toRect()) : QRectF(button->geometry());
+        if (button->isDown()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(19, 89, 66, 48));
+            painter.drawRoundedRect(actionRect.adjusted(1, 1, -1, -1), 14, 14);
+        } else if (button->underMouse()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(255, 255, 255, 28));
+            painter.drawRoundedRect(actionRect.adjusted(1, 1, -1, -1), 14, 14);
+        }
+        if (AppStyle::keyboardFocusVisible(button)) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(255, 243, 160, 55));
+            painter.drawRoundedRect(actionRect.adjusted(1, 1, -1, -1), 14, 14);
+            painter.setBrush(QColor("#D4B844"));
+            painter.drawEllipse(actionRect.topLeft() + QPointF(8, 8), 3.5, 3.5);
+        }
+    }
+    painter.restore();
+}
+
+void ForestDashboardWidget::changeSelectedDate(int direction)
+{
+    switch (periodMode_) {
+    case PeriodMode::Day: selectedDate_ = selectedDate_.addDays(direction); break;
+    case PeriodMode::Week: selectedDate_ = selectedDate_.addDays(direction * 7); break;
+    case PeriodMode::Month: selectedDate_ = selectedDate_.addMonths(direction); break;
+    case PeriodMode::Year: selectedDate_ = selectedDate_.addYears(direction); break;
+    }
+    cachedData_.reset();
+    invalidateStaticLayer();
 }
 
 const ForestDashboardWidget::DashboardData& ForestDashboardWidget::buildData() const
@@ -163,12 +273,52 @@ const ForestDashboardWidget::DashboardData& ForestDashboardWidget::buildData() c
     }
     return *cachedData_;
 }
+
+void ForestDashboardWidget::invalidateStaticLayer()
+{
+    staticLayerDirty_ = true;
+    staticLayerCache_ = QPixmap();
+    update();
+}
+
+void ForestDashboardWidget::resizeEvent(QResizeEvent* event)
+{
+    staticLayerDirty_ = true;
+    staticLayerCache_ = QPixmap();
+    QWidget::resizeEvent(event);
+}
+
 void ForestDashboardWidget::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
 
+    const qreal dpr = devicePixelRatioF();
+    const QSize pixelSize(qRound(width() * dpr), qRound(height() * dpr));
+    if (staticLayerDirty_ || staticLayerCache_.size() != pixelSize ||
+        !qFuzzyCompare(staticLayerCache_.devicePixelRatio(), dpr)) {
+        QPixmap nextLayer(pixelSize);
+        nextLayer.setDevicePixelRatio(dpr);
+        nextLayer.fill(Qt::transparent);
+        QPainter staticPainter(&nextLayer);
+        staticPainter.setRenderHint(QPainter::Antialiasing, true);
+        staticPainter.setRenderHint(QPainter::TextAntialiasing, true);
+        drawStaticLayer(staticPainter);
+        staticPainter.end();
+        staticLayerCache_ = std::move(nextLayer);
+        staticLayerDirty_ = false;
+        ++staticRenderGeneration_;
+        setProperty("forestStaticRenderGeneration",
+                    QVariant::fromValue<qulonglong>(staticRenderGeneration_));
+    }
+
+    painter.drawPixmap(QPoint(0, 0), staticLayerCache_);
+    drawActionStates(painter);
+}
+
+void ForestDashboardWidget::drawStaticLayer(QPainter& painter)
+{
     QLinearGradient bg(rect().topLeft(), rect().bottomLeft());
     bg.setColorAt(0.0, QColor("#2F7B62"));
     bg.setColorAt(0.34, QColor("#64BCA3"));
@@ -205,7 +355,7 @@ void ForestDashboardWidget::paintEvent(QPaintEvent*)
     drawTreeCard(painter, treeRect, data);
 }
 
-void ForestDashboardWidget::drawHeader(QPainter& painter, const QRectF& rect) const
+void ForestDashboardWidget::drawHeader(QPainter& painter, const QRectF& rect)
 {
     painter.save();
     painter.setPen(Qt::NoPen);
@@ -287,10 +437,27 @@ void ForestDashboardWidget::drawHeader(QPainter& painter, const QRectF& rect) co
     painter.drawRoundedRect(filtersRect_, 16, 16);
     painter.setPen(recordFilter_.isActive() ? QColor("#245543") : QColor("#F7FFF7"));
     painter.drawText(filtersRect_, Qt::AlignCenter, QStringLiteral("筛选"));
+    syncActionButton(QStringLiteral("forestOverviewAction"), overviewRect_, QStringLiteral("总览筛选"),
+                     QStringLiteral("选择项目标签筛选"));
+    const QStringList periodKeys = {QStringLiteral("forestPeriodDayAction"), QStringLiteral("forestPeriodWeekAction"),
+                                    QStringLiteral("forestPeriodMonthAction"), QStringLiteral("forestPeriodYearAction")};
+    const QStringList periodNames = {QStringLiteral("按日查看"), QStringLiteral("按周查看"),
+                                     QStringLiteral("按月查看"), QStringLiteral("按年查看")};
+    for (int i = 0; i < periodTabRects_.size(); ++i) {
+        syncActionButton(periodKeys[i], periodTabRects_[i], periodNames[i], periodNames[i]);
+    }
+    syncActionButton(QStringLiteral("forestPreviousDateAction"), prevDateRect_, QStringLiteral("上一周期"),
+                     QStringLiteral("查看上一周期"));
+    syncActionButton(QStringLiteral("forestNextDateAction"), nextDateRect_, QStringLiteral("下一周期"),
+                     QStringLiteral("查看下一周期"));
+    syncActionButton(QStringLiteral("forestFilterAction"), filtersRect_, QStringLiteral("高级筛选"),
+                     QStringLiteral("打开高级筛选"));
+    syncActionButton(QStringLiteral("forestSettingsAction"), settingsRect_, QStringLiteral("森林设置"),
+                     QStringLiteral("打开森林设置"));
     painter.restore();
 }
 
-void ForestDashboardWidget::drawIslandPanel(QPainter& painter, const QRectF& rect, const DashboardData& data) const
+void ForestDashboardWidget::drawIslandPanel(QPainter& painter, const QRectF& rect, const DashboardData& data)
 {
     painter.save();
 
@@ -522,19 +689,19 @@ void ForestDashboardWidget::drawIslandPanel(QPainter& painter, const QRectF& rec
                   return a.base.y() < b.base.y();
               });
 
-    islandPlantHitRects_.clear();
+    islandPlantHitRegions_.clear();
     // Keep plant images complete even when their canopies reach the island boundary.
     for (const auto& plant : positioned) {
-        drawPlantImage(painter, plant.base, plant.scale,
-                       plant.plant->plantType, plant.plant->abandoned);
-        const qreal hitWidth = 92.0 * plant.scale;
-        const qreal hitHeight = 126.0 * plant.scale;
-        islandPlantHitRects_.push_back({
-            QRectF(plant.base.x() - hitWidth * 0.5, plant.base.y() - hitHeight,
-                   hitWidth, hitHeight),
-            plant.plant->recordId
-        });
+        const QRect drawRect = drawPlantImage(painter, plant.base, plant.scale,
+                                              plant.plant->plantType,
+                                              plant.plant->abandoned).toAlignedRect();
+        const QRect feedbackRect = drawRect.adjusted(-4, -4, 4, 4);
+        const QRect hitRect = centeredMinimumRect(
+            feedbackRect.adjusted(-4, -4, 4, 4), 44, 44);
+        islandPlantHitRegions_.push_back(
+            {hitRect, drawRect, feedbackRect, plant.plant->recordId});
     }
+    syncPlantButtons();
 
     painter.setPen(QPen(QColor(255, 255, 255, 150), 1));
     for (int i = 0; i < 10; ++i) {
@@ -868,17 +1035,51 @@ void ForestDashboardWidget::drawWitheredTree(QPainter& painter, QPointF base, qr
     painter.restore();
 }
 
-void ForestDashboardWidget::drawPlantImage(QPainter& painter, QPointF base, qreal scale,
-                                           uint32_t plantType, bool abandoned) const
+const ForestDashboardWidget::PlantSprite& ForestDashboardWidget::plantSprite(
+    uint32_t plantType) const
 {
-    QPixmap pm = PlantImageUtils::loadPlantIcon(finalPlantPath(plantType));
-    if (pm.isNull()) {
-        if (abandoned) drawWitheredTree(painter, base, scale);
-        else drawTree(painter, base, scale, PlantCatalog::byType(plantType).chartColor);
-        return;
+    auto existing = plantSpriteCache_.constFind(plantType);
+    if (existing != plantSpriteCache_.cend()) return existing.value();
+
+    PlantSprite sprite;
+    const QPixmap source = PlantImageUtils::loadPlantIcon(finalPlantPath(plantType));
+    sprite.sourceSize = source.size();
+    sprite.opaqueSourceRect = opaqueBounds(source);
+    if (!sprite.opaqueSourceRect.isEmpty()) {
+        sprite.pixmap = source.copy(sprite.opaqueSourceRect);
+        if (sprite.pixmap.width() > 192 || sprite.pixmap.height() > 192) {
+            sprite.pixmap = sprite.pixmap.scaled(
+                QSize(192, 192), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
     }
-    if (abandoned) {
-        pm = grayscalePixmap(pm);
+    return plantSpriteCache_.insert(plantType, std::move(sprite)).value();
+}
+
+QPixmap ForestDashboardWidget::plantSpritePixmap(uint32_t plantType, bool abandoned) const
+{
+    const PlantSprite& sprite = plantSprite(plantType);
+    if (!abandoned || sprite.pixmap.isNull()) return sprite.pixmap;
+
+    auto existing = abandonedPlantSpriteCache_.constFind(plantType);
+    if (existing != abandonedPlantSpriteCache_.cend()) return existing.value();
+    return abandonedPlantSpriteCache_.insert(
+        plantType, grayscalePixmap(sprite.pixmap)).value();
+}
+
+QRectF ForestDashboardWidget::drawPlantImage(QPainter& painter, QPointF base, qreal scale,
+                                             uint32_t plantType, bool abandoned) const
+{
+    const PlantSprite& sprite = plantSprite(plantType);
+    const QPixmap pm = plantSpritePixmap(plantType, abandoned);
+    if (pm.isNull() || sprite.sourceSize.isEmpty() || sprite.opaqueSourceRect.isEmpty()) {
+        if (abandoned) {
+            drawWitheredTree(painter, base, scale);
+            return QRectF(base.x() - 20 * scale, base.y() - 56 * scale,
+                          40 * scale, 60 * scale);
+        }
+        drawTree(painter, base, scale, PlantCatalog::byType(plantType).chartColor);
+        return QRectF(base.x() - 25 * scale, base.y() - 72 * scale,
+                      51 * scale, 72 * scale);
     }
 
     painter.save();
@@ -887,13 +1088,21 @@ void ForestDashboardWidget::drawPlantImage(QPainter& painter, QPointF base, qrea
     painter.drawEllipse(QRectF(base.x() - 23 * scale, base.y() - 8 * scale,
                                46 * scale, 14 * scale));
 
-    const QSizeF targetSize = pm.size().scaled(58 * scale, 72 * scale, Qt::KeepAspectRatio);
-    QRectF target(base.x() - targetSize.width() / 2,
-                  base.y() - targetSize.height() + 4 * scale,
-                  targetSize.width(),
-                  targetSize.height());
-    painter.drawPixmap(target.toRect(), pm);
+    const QSizeF canvasSize = sprite.sourceSize.scaled(
+        58 * scale, 72 * scale, Qt::KeepAspectRatio);
+    const QRectF canvasRect(base.x() - canvasSize.width() / 2,
+                            base.y() - canvasSize.height() + 4 * scale,
+                            canvasSize.width(), canvasSize.height());
+    const qreal xScale = canvasRect.width() / sprite.sourceSize.width();
+    const qreal yScale = canvasRect.height() / sprite.sourceSize.height();
+    const QRectF target(
+        canvasRect.left() + sprite.opaqueSourceRect.left() * xScale,
+        canvasRect.top() + sprite.opaqueSourceRect.top() * yScale,
+        sprite.opaqueSourceRect.width() * xScale,
+        sprite.opaqueSourceRect.height() * yScale);
+    painter.drawPixmap(target.toAlignedRect(), pm);
     painter.restore();
+    return target;
 }
 
 void ForestDashboardWidget::drawPond(QPainter& painter, const QPointF& center, qreal w, qreal h) const

@@ -1,7 +1,5 @@
 #include "ui/SidebarNavigation.h"
 
-#include <QAbstractAnimation>
-#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QStyle>
@@ -27,24 +25,17 @@ bool SidebarNavigation::switchTo(int pageIndex, const std::function<void(int)>& 
 void SidebarNavigation::toggle(uint32_t coinBalance)
 {
     if (!sidebar_) return;
-    const int startWidth = expanded_ ? 180 : 60;
     const int endWidth = expanded_ ? 60 : 180;
     expanded_ = !expanded_;
     coinBalance_ = coinBalance;
 
-    auto* minAnimation = new QPropertyAnimation(sidebar_, "minimumWidth", sidebar_);
-    minAnimation->setDuration(220);
-    minAnimation->setStartValue(startWidth);
-    minAnimation->setEndValue(endWidth);
-    minAnimation->setEasingCurve(QEasingCurve::InOutQuad);
-    auto* maxAnimation = new QPropertyAnimation(sidebar_, "maximumWidth", sidebar_);
-    maxAnimation->setDuration(220);
-    maxAnimation->setStartValue(startWidth);
-    maxAnimation->setEndValue(endWidth);
-    maxAnimation->setEasingCurve(QEasingCurve::InOutQuad);
-    minAnimation->start(QAbstractAnimation::DeleteWhenStopped);
-    maxAnimation->start(QAbstractAnimation::DeleteWhenStopped);
+    sidebar_->setFixedWidth(endWidth);
     applyLabels();
+}
+
+void SidebarNavigation::setReducedMotion(bool reducedMotion)
+{
+    Q_UNUSED(reducedMotion);
 }
 
 void SidebarNavigation::setCoinBalance(uint32_t coinBalance)
@@ -62,6 +53,13 @@ void SidebarNavigation::applyLabels()
     }
     for (const Item& item : items_) {
         if (item.button) item.button->setText(expanded_ ? item.expandedText : item.collapsedText);
+    }
+    if (toggleButton_) {
+        toggleButton_->setAccessibleName(expanded_ ? QStringLiteral("Collapse navigation")
+                                                   : QStringLiteral("Expand navigation"));
+    }
+    for (const Item& item : items_) {
+        if (item.button) item.button->setAccessibleName(item.expandedText);
     }
     setCoinBalance(coinBalance_);
 }

@@ -1,10 +1,12 @@
-#ifndef FORESTDASHBOARDWIDGET_H
+﻿#ifndef FORESTDASHBOARDWIDGET_H
 #define FORESTDASHBOARDWIDGET_H
 
 #include <QWidget>
 #include <QColor>
 #include <QDate>
+#include <QHash>
 #include <QMap>
+#include <QPixmap>
 #include <QRectF>
 #include <QString>
 #include <QStringList>
@@ -18,7 +20,8 @@
 
 class QPainter;
 class QRectF;
-class QMouseEvent;
+class QResizeEvent;
+class QToolButton;
 
 // Desktop overview dashboard for "我的森林".
 class ForestDashboardWidget : public QWidget {
@@ -51,9 +54,9 @@ signals:
     void filtersRequested();
 
 protected:
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
     enum class PeriodMode {
@@ -69,10 +72,25 @@ private:
     using IslandPlant = FocusStatisticsQuery::IslandPlant;
     using DashboardData = FocusStatisticsQuery::Snapshot;
 
-    const DashboardData& buildData() const;
+    struct PlantHitRegion {
+        QRect hitRect;
+        QRect drawRect;
+        QRect feedbackRect;
+        uint32_t recordId = 0;
+    };
 
-    void drawHeader(QPainter& painter, const QRectF& rect) const;
-    void drawIslandPanel(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
+    struct PlantSprite {
+        QPixmap pixmap;
+        QSize sourceSize;
+        QRect opaqueSourceRect;
+    };
+
+    const DashboardData& buildData() const;
+    void invalidateStaticLayer();
+    void drawStaticLayer(QPainter& painter);
+
+    void drawHeader(QPainter& painter, const QRectF& rect);
+    void drawIslandPanel(QPainter& painter, const QRectF& rect, const DashboardData& data);
     void drawOverviewCards(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
     void drawTimeCard(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
     void drawProjectCard(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
@@ -81,11 +99,20 @@ private:
     void drawCard(QPainter& painter, const QRectF& rect, qreal radius = 22.0) const;
     void drawTree(QPainter& painter, QPointF base, qreal scale, const QColor& crown) const;
     void drawWitheredTree(QPainter& painter, QPointF base, qreal scale) const;
-    void drawPlantImage(QPainter& painter, QPointF base, qreal scale,
-                        uint32_t plantType, bool abandoned) const;
+    QRectF drawPlantImage(QPainter& painter, QPointF base, qreal scale,
+                          uint32_t plantType, bool abandoned) const;
+    const PlantSprite& plantSprite(uint32_t plantType) const;
+    QPixmap plantSpritePixmap(uint32_t plantType, bool abandoned) const;
     void drawPond(QPainter& painter, const QPointF& center, qreal w, qreal h) const;
     void drawTextFit(QPainter& painter, const QRectF& rect, const QString& text,
                      int flags, int minPointSize = 8) const;
+    QToolButton* actionButton(const QString& key, const QString& accessibleName,
+                              const QString& tooltip);
+    void syncActionButton(const QString& key, const QRectF& rect,
+                          const QString& accessibleName, const QString& tooltip);
+    void syncPlantButtons();
+    void drawActionStates(QPainter& painter) const;
+    void changeSelectedDate(int direction);
 
     std::vector<FocusRecord> records_;
     std::vector<FocusRecord> allRecords_;
@@ -99,8 +126,14 @@ private:
     mutable QRectF settingsRect_;
     mutable QRectF overviewRect_;
     mutable QRectF filtersRect_;
-    mutable QVector<QPair<QRectF, uint32_t>> islandPlantHitRects_;
+    mutable QVector<PlantHitRegion> islandPlantHitRegions_;
+    QHash<QString, QToolButton*> actionButtons_;
     mutable std::optional<DashboardData> cachedData_;
+    mutable QHash<uint32_t, PlantSprite> plantSpriteCache_;
+    mutable QHash<uint32_t, QPixmap> abandonedPlantSpriteCache_;
+    QPixmap staticLayerCache_;
+    bool staticLayerDirty_ = true;
+    qulonglong staticRenderGeneration_ = 0;
     RecordFilter recordFilter_;
 };
 

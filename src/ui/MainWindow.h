@@ -7,12 +7,8 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPointer>
 #include <QStackedWidget>
-#include <QPropertyAnimation>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QListWidget>
-#include <QLineEdit>
 #include <QCheckBox>
 #include <QFont>
 #include <memory>
@@ -35,6 +31,7 @@ class ChallengeDashboardWidget;
 class GuardianDashboardWidget;
 class PlantTimerWidget;
 class SettingsDialog;
+class SettingsPage;
 class AchievementEngine;
 class DashboardSnapshotService;
 class GachaManager;
@@ -48,6 +45,7 @@ class QProgressBar;
 class QSpinBox;
 class QTabWidget;
 class QAction;
+class QDialog;
 
 // Main application shell. It wires the controller, monitor, storage, wallet,
 // presets, achievements, and all page widgets together.
@@ -162,6 +160,7 @@ private:
     QWidget* countdownOptionsWidget_ = nullptr;
     QWidget* homeModeOverlay_ = nullptr;
     QWidget* homeModePanel_ = nullptr;
+    QWidget* homeModeReturnFocus_ = nullptr;
     QWidget* pauseBreakOverlay_ = nullptr;
     QLabel* pauseBreakTimeLabel_ = nullptr;
     QPushButton* pauseBreakContinueBtn_ = nullptr;
@@ -181,18 +180,9 @@ private:
     QPushButton *btnToggle_, *btnHome_, *btnForest_, *btnShop_, *btnGacha_, *btnFriends_, *btnChallenges_, *btnGuardian_, *btnAchievements_, *btnSettings_;
     std::unique_ptr<SidebarNavigation> sidebarNavigation_;
 
-    QComboBox* settingsPlantCombo_ = nullptr;
-    QComboBox* settingsModeCombo_ = nullptr;
-    QCheckBox* settingsDeepFocusCheck_ = nullptr;
-    QCheckBox* settingsAllowPauseCheck_ = nullptr;
-    QSpinBox* settingsMinutesSpin_ = nullptr;
-    QComboBox* settingsTagCombo_ = nullptr;
-    QListWidget* settingsBlacklistWidget_ = nullptr;
-    QLineEdit* settingsBlacklistInput_ = nullptr;
-    QLineEdit* settingsOathInput_ = nullptr;
-
-
+    SettingsPage* settingsPage_ = nullptr;
     GuardianDashboardWidget* guardianDashboard_ = nullptr;
+    QPointer<QDialog> homePlantSelector_;
 };
 
 #endif // MAINWINDOW_H

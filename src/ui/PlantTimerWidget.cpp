@@ -1,20 +1,60 @@
 #include "ui/PlantTimerWidget.h"
 #include "config/PlantCatalog.h"
+#include "ui/PaintedActionButton.h"
 #include "ui/PlantImageUtils.h"
+#include "ui/AppStyle.h"
 #include <QPainter>
 #include <QPainterPath>
 #include <QImage>
 #include <QMouseEvent>
+#include <QKeyEvent>
 #include <QSizePolicy>
 #include <QFontMetrics>
 #include <QtMath>
 #include <cmath>
 
-PlantTimerWidget::PlantTimerWidget(QWidget* parent) : QWidget(parent)
+PlantTimerWidget::PlantTimerWidget(QWidget* parent) : QAbstractSlider(parent)
 {
+    setRange(10, 120);
+    setSingleStep(1);
+    setPageStep(5);
+    setValue(25);
+    connect(this, &QAbstractSlider::valueChanged, this, [this](int minutes) {
+        if (selectedMinutes_ == static_cast<uint32_t>(minutes)) return;
+        selectedMinutes_ = static_cast<uint32_t>(minutes);
+        if (!isRunning_ && !isStopwatch_) displaySeconds_ = selectedMinutes_ * 60;
+        knobAngle_ = minutesToAngle(selectedMinutes_);
+        emit sig_timeSelected(selectedMinutes_);
+        update();
+    });
     setMinimumSize(280, 300);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+    setAccessibleName(QStringLiteral("Focus duration timer"));
+    setAccessibleDescription(QStringLiteral("Use arrow keys to adjust one minute and Page Up or Page Down to adjust five minutes."));
+    tagAction_ = new PaintedActionButton(this);
+    tagAction_->setObjectName("timerTagAction");
+    tagAction_->setFocusPolicy(Qt::StrongFocus);
+    tagAction_->setAccessibleName(QStringLiteral("Choose focus tag"));
+    tagAction_->setAccessibleDescription(QStringLiteral("Opens the focus tag selector."));
+    tagAction_->setToolTip(QStringLiteral("选择项目标签"));
+    tagAction_->setStyleSheet(QStringLiteral(
+        "QToolButton { background:transparent; border:2px solid transparent; border-radius:15px; color:transparent; }"
+        "QToolButton:hover { background:rgba(255,255,255,16); }"
+        "QToolButton:pressed { background:rgba(36,69,56,28); }"));
+    plantAction_ = new PaintedActionButton(this);
+    plantAction_->setObjectName("timerPlantAction");
+    plantAction_->setFocusPolicy(Qt::StrongFocus);
+    plantAction_->setAccessibleName(QStringLiteral("Choose focus plant"));
+    plantAction_->setAccessibleDescription(QStringLiteral("Opens the focus plant selector."));
+    plantAction_->setToolTip(QStringLiteral("选择专注植物"));
+    plantAction_->setStyleSheet(QStringLiteral(
+        "QToolButton { background:transparent; border:2px solid transparent; border-radius:18px; color:transparent; }"
+        "QToolButton:hover { background:rgba(255,255,255,16); }"
+        "QToolButton:pressed { background:rgba(36,69,56,28); }"));
+    connect(tagAction_, &PaintedActionButton::clicked, this, &PlantTimerWidget::sig_tagClicked);
+    connect(plantAction_, &PaintedActionButton::clicked, this, &PlantTimerWidget::sig_plantClicked);
     selectedMinutes_ = 25;
     knobAngle_ = minutesToAngle(selectedMinutes_);
 }
@@ -60,6 +100,7 @@ void PlantTimerWidget::setTagInfo(const QString& text, const QColor& color)
 void PlantTimerWidget::setSelectedMinutes(uint32_t minutes)
 {
     selectedMinutes_ = qBound<uint32_t>(10, minutes, 120);
+    setValue(static_cast<int>(selectedMinutes_));
     if (!isRunning_ && !isStopwatch_) displaySeconds_ = selectedMinutes_ * 60;
     knobAngle_ = minutesToAngle(selectedMinutes_);
     update();
@@ -67,10 +108,10 @@ void PlantTimerWidget::setSelectedMinutes(uint32_t minutes)
 
 void PlantTimerWidget::resizeEvent(QResizeEvent*)
 {
-    int reservedBottom = 140;
+    int reservedBottom = 200;
     int reservedTop = 36;
     int side = qMin(width() - 90, height() - reservedTop - reservedBottom);
-    side = qBound(130, side, 430);
+    side = qBound(130, side, 380);
     ringRadius_ = side / 2.0;
     ringCenterX_ = width() / 2.0;
     double maxCenterY = height() - reservedBottom - ringRadius_;
@@ -78,6 +119,45 @@ void PlantTimerWidget::resizeEvent(QResizeEvent*)
     ringCenterY_ = qBound(ringRadius_ + 28, preferredCenterY, maxCenterY);
     ringRect_ = QRectF(ringCenterX_ - ringRadius_, ringCenterY_ - ringRadius_,
                        ringRadius_ * 2, ringRadius_ * 2);
+    updateSemanticActionGeometry();
+}
+
+void PlantTimerWidget::keyPressEvent(QKeyEvent* event)
+{
+    int adjustment = 0;
+    switch (event->key()) {
+    case Qt::Key_Left:
+    case Qt::Key_Down:
+        adjustment = -1;
+        break;
+    case Qt::Key_Right:
+    case Qt::Key_Up:
+        adjustment = 1;
+        break;
+    case Qt::Key_PageDown:
+        adjustment = -5;
+        break;
+    case Qt::Key_PageUp:
+        adjustment = 5;
+        break;
+    default:
+        QAbstractSlider::keyPressEvent(event);
+        return;
+    }
+    if (!selectorVisible()) return;
+    const uint32_t previousMinutes = selectedMinutes_;
+    setSelectedMinutes(static_cast<uint32_t>(qBound(10, static_cast<int>(selectedMinutes_) + adjustment, 120)));
+    if (selectedMinutes_ != previousMinutes) emit sig_timeSelected(selectedMinutes_);
+    event->accept();
+}
+
+void PlantTimerWidget::updateSemanticActionGeometry()
+{
+    if (tagAction_) tagAction_->setGeometry(tagRect_.toAlignedRect());
+    if (plantAction_) {
+        plantAction_->setGeometry(plantRect_.toAlignedRect());
+        plantAction_->setVisible(selectorVisible() && !plantRect_.isEmpty());
+    }
 }
 
 double PlantTimerWidget::angleFromPoint(const QPointF& p) const
@@ -125,18 +205,11 @@ bool PlantTimerWidget::selectorVisible() const
 void PlantTimerWidget::mousePressEvent(QMouseEvent* event)
 {
     QPointF pos = event->position();
-    if (tagRect_.contains(pos)) {
-        emit sig_tagClicked();
-        return;
-    }
     if (!selectorVisible()) return;
     if (isOnKnob(pos)) {
         dragging_ = true;
         setCursor(Qt::ClosedHandCursor);
         return;
-    }
-    if (plantRect_.contains(pos)) {
-        emit sig_plantClicked();
     }
 }
 
@@ -150,6 +223,7 @@ void PlantTimerWidget::mouseMoveEvent(QMouseEvent* event)
         uint32_t newMins = static_cast<uint32_t>(qRound(mins));
         if (newMins != selectedMinutes_) {
             selectedMinutes_ = newMins;
+            setValue(static_cast<int>(selectedMinutes_));
             displaySeconds_ = selectedMinutes_ * 60;
             knobAngle_ = minutesToAngle(selectedMinutes_);
             emit sig_timeSelected(selectedMinutes_);
@@ -245,89 +319,48 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing, true);
 
     painter.setPen(Qt::NoPen);
-    QRadialGradient ambient(QPointF(width() * 0.50, height() * 0.36), width() * 0.44);
-    ambient.setColorAt(0.0, QColor(247, 244, 198, 34));
-    ambient.setColorAt(0.68, QColor(205, 238, 193, 16));
-    ambient.setColorAt(1.0, QColor(205, 238, 193, 0));
+    QRadialGradient ambient(QPointF(width() * 0.50, height() * 0.36), width() * 0.38);
+    ambient.setColorAt(0.0, QColor(255, 255, 255, 26));
+    ambient.setColorAt(1.0, QColor(255, 255, 255, 0));
     painter.setBrush(ambient);
-    painter.drawEllipse(QRectF(width() * 0.06, height() * 0.02, width() * 0.88, height() * 0.76));
-
-    painter.setPen(QPen(QColor(255, 255, 255, 36), 1, Qt::SolidLine, Qt::RoundCap));
-    for (int x = 30; x < width(); x += 52) {
-        painter.drawLine(x, 22, x + 18, 22);
-    }
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(244, 250, 222, 58));
-    for (int i = 0; i < 14; ++i) {
-        const qreal x = 34 + (i * 83) % qMax(1, width() - 68);
-        const qreal y = 54 + (i * 61) % qMax(1, qMax(86, height() - 150));
-        painter.drawEllipse(QRectF(x, y, 3.5, 3.5));
-    }
-    const QVector<QPair<QPointF, QSizeF>> leafMotifs = {
-        {QPointF(width() * 0.17, height() * 0.36), QSizeF(42, 18)},
-        {QPointF(width() * 0.80, height() * 0.30), QSizeF(34, 15)},
-        {QPointF(width() * 0.22, height() * 0.68), QSizeF(30, 13)},
-        {QPointF(width() * 0.78, height() * 0.68), QSizeF(44, 18)},
-    };
-    painter.setBrush(QColor(220, 247, 200, 24));
-    for (int i = 0; i < leafMotifs.size(); ++i) {
-        painter.save();
-        painter.translate(leafMotifs[i].first);
-        painter.rotate(i % 2 == 0 ? -28 : 28);
-        const QSizeF size = leafMotifs[i].second;
-        painter.drawEllipse(QRectF(-size.width() / 2, -size.height() / 2,
-                                  size.width(), size.height()));
-        painter.restore();
-    }
+    painter.drawEllipse(QRectF(width() * 0.12, height() * 0.04, width() * 0.76, height() * 0.68));
 
     const bool showSelector = selectorVisible();
-    QRectF glowRect = ringRect_.adjusted(-32, -32, 32, 32);
+    QRectF glowRect = ringRect_.adjusted(-20, -20, 20, 20);
     QRadialGradient glow(glowRect.center(), glowRect.width() * 0.55);
-    glow.setColorAt(0.0, QColor(255, 255, 255, 82));
-    glow.setColorAt(0.62, QColor(242, 244, 198, 78));
-    glow.setColorAt(1.0, QColor(242, 244, 198, 0));
+    glow.setColorAt(0.0, QColor(247, 255, 233, 34));
+    glow.setColorAt(1.0, QColor(247, 255, 233, 0));
     painter.setBrush(glow);
     painter.setPen(Qt::NoPen);
     painter.drawEllipse(glowRect);
 
-    painter.setBrush(QColor(35, 103, 77, 44));
-    painter.drawEllipse(ringRect_.translated(0, 13).adjusted(-5, -2, 5, 8));
+    painter.setBrush(QColor(35, 103, 77, 30));
+    painter.drawEllipse(ringRect_.translated(0, 8));
 
-    QLinearGradient rimGradient(ringRect_.topLeft(), ringRect_.bottomRight());
-    rimGradient.setColorAt(0.0, QColor("#FFF6B8"));
-    rimGradient.setColorAt(0.52, QColor("#E8EC84"));
-    rimGradient.setColorAt(1.0, QColor("#B9D84A"));
-    painter.setBrush(rimGradient);
-    painter.setPen(QPen(QColor("#DCE56A"), 3));
+    painter.setBrush(QColor("#F2EFAF"));
+    painter.setPen(QPen(QColor("#E4E797"), 2));
     painter.drawEllipse(ringRect_);
 
-    QRectF innerRect = showSelector ? ringRect_.adjusted(18, 18, -18, -18)
-                                    : ringRect_.adjusted(22, 22, -22, -22);
-    QRadialGradient sanctuary(innerRect.center() - QPointF(innerRect.width() * 0.12,
-                                                            innerRect.height() * 0.16),
-                            innerRect.width() * 0.70);
-    sanctuary.setColorAt(0.0, QColor("#FFFCE4"));
-    sanctuary.setColorAt(0.64, QColor("#F8F1B2"));
-    sanctuary.setColorAt(1.0, QColor("#EDEB91"));
-    painter.setBrush(sanctuary);
-    painter.setPen(QPen(QColor(255, 255, 255, 120), 2));
+    QRectF innerRect = ringRect_.adjusted(14, 14, -14, -14);
+    painter.setBrush(QColor("#F8F4C8"));
+    painter.setPen(QPen(QColor(255, 255, 255, 80), 1));
     painter.drawEllipse(innerRect);
 
     if (showSelector) {
         QPen trackPen;
-        trackPen.setColor(QColor(216, 203, 73, 166));
-        trackPen.setWidth(10);
+        trackPen.setColor(QColor("#D8DE86"));
+        trackPen.setWidth(8);
         trackPen.setCapStyle(Qt::RoundCap);
         painter.setPen(trackPen);
-        painter.drawEllipse(ringRect_.adjusted(7, 7, -7, -7));
+        painter.drawEllipse(ringRect_.adjusted(6, 6, -6, -6));
 
         if (knobAngle_ > 1) {
             QPen progressPen;
             progressPen.setColor(QColor("#A4D33A"));
-            progressPen.setWidth(11);
+            progressPen.setWidth(9);
             progressPen.setCapStyle(Qt::RoundCap);
             painter.setPen(progressPen);
-            painter.drawArc(ringRect_.adjusted(7, 7, -7, -7), 90 * 16,
+            painter.drawArc(ringRect_.adjusted(6, 6, -6, -6), 90 * 16,
                             -static_cast<int>(knobAngle_ * 16));
         }
 
@@ -337,33 +370,10 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
         knobBorder.setColor(QColor("#BFE15C"));
         knobBorder.setWidth(2);
         painter.setPen(knobBorder);
-        painter.drawEllipse(kc, 14, 14);
-        painter.setBrush(QColor(255, 255, 255, 85));
+        painter.drawEllipse(kc, 11, 11);
+        painter.setBrush(QColor(255, 255, 255, 105));
         painter.setPen(Qt::NoPen);
-        painter.drawEllipse(QPointF(kc.x() - 4, kc.y() - 5), 4, 4);
-    }
-
-    painter.save();
-    QPainterPath sanctuaryClip;
-    sanctuaryClip.addEllipse(innerRect);
-    painter.setClipPath(sanctuaryClip);
-    painter.setPen(QPen(QColor("#E8D98F"), 1, Qt::SolidLine, Qt::RoundCap));
-    for (int i = 0; i < 12; ++i) {
-        const qreal x = innerRect.left() + innerRect.width() * (0.16 + (i % 4) * 0.22);
-        const qreal y = innerRect.top() + innerRect.height() * (0.18 + (i / 4) * 0.22);
-        painter.drawLine(QPointF(x - 4, y + 2), QPointF(x + 4, y - 2));
-    }
-    painter.restore();
-
-    if (showSelector) {
-        const QRectF guideRect(innerRect.center().x() - 94, innerRect.top() + innerRect.height() * 0.13,
-                               188, 24);
-        painter.setBrush(QColor(255, 255, 255, 70));
-        painter.setPen(Qt::NoPen);
-        painter.drawRoundedRect(guideRect, 12, 12);
-        painter.setFont(QFont("Microsoft YaHei", 9, QFont::DemiBold));
-        painter.setPen(QColor("#5A813D"));
-        painter.drawText(guideRect, Qt::AlignCenter, QStringLiteral("拖动光环调整时长"));
+        painter.drawEllipse(QPointF(kc.x() - 3, kc.y() - 4), 3, 3);
     }
 
     // --- growth stage from actual progress (or selected minutes if idle) ------
@@ -408,6 +418,22 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
             plantRect_ = QRectF();
         }
     }
+    if (showSelector && AppStyle::keyboardFocusVisible(plantAction_) && !plantRect_.isEmpty()) {
+        painter.setPen(QPen(QColor("#6E6A2C"), 1));
+        painter.setBrush(QColor("#F4D970"));
+        painter.drawEllipse(QPointF(plantRect_.center().x(), plantRect_.top() + 8), 4, 4);
+    }
+
+    if (showSelector) {
+        const QRectF guideRect(innerRect.center().x() - 94, qMax<qreal>(4, ringRect_.top() - 40),
+                               188, 24);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(250, 248, 218, 218));
+        painter.drawRoundedRect(guideRect, 12, 12);
+        painter.setFont(QFont("Microsoft YaHei", 9, QFont::DemiBold));
+        painter.setPen(QColor("#557540"));
+        painter.drawText(guideRect, Qt::AlignCenter, QStringLiteral("拖动光环调整时长"));
+    }
 
     uint32_t secs = displaySeconds_;
     int m = (secs % 3600) / 60;
@@ -421,8 +447,8 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
     QFontMetrics tagMetrics(tagFont);
     const qreal tagWidth = qBound<qreal>(124, tagMetrics.horizontalAdvance(tagText_) + 62, 200);
     tagRect_ = QRectF(ringCenterX_ - tagWidth / 2.0, tagTop, tagWidth, 38);
-    painter.setBrush(QColor(255, 255, 255, 50));
-    painter.setPen(QPen(QColor(255, 255, 255, 58), 1));
+    painter.setBrush(QColor(255, 255, 255, 42));
+    painter.setPen(QPen(QColor(255, 255, 255, 72), 1));
     painter.drawRoundedRect(tagRect_, 15, 15);
     painter.setBrush(tagColor_);
     painter.setPen(Qt::NoPen);
@@ -430,6 +456,12 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
     painter.setFont(tagFont);
     painter.setPen(QColor("#F7FFF7"));
     painter.drawText(tagRect_.adjusted(24, 0, -8, 0), Qt::AlignCenter, tagText_);
+    if (AppStyle::keyboardFocusVisible(tagAction_)) {
+        painter.setPen(QPen(QColor("#F4D970"), 3, Qt::SolidLine, Qt::RoundCap));
+        painter.drawLine(QPointF(tagRect_.center().x() - 16, tagRect_.bottom() - 6),
+                         QPointF(tagRect_.center().x() + 16, tagRect_.bottom() - 6));
+    }
+    updateSemanticActionGeometry();
 
     int timePointSize = qBound(40, static_cast<int>(height() * 0.118), 62);
     QFont timeFont("Segoe UI Light", timePointSize, QFont::Light);
@@ -437,24 +469,8 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
     painter.setPen(QColor("#F7FFF7"));
     const QFontMetricsF timeMetrics(timeFont);
     const qreal timeHeight = timeMetrics.height() + 8;
-    const qreal timeTop = tagRect_.bottom() + 16;
-    const qreal timeBottom = height() - 12;
-    const qreal centeredTimeTop = timeTop + qMax<qreal>(0, (timeBottom - timeTop - timeHeight) / 2.0);
-    const qreal preferredTimeOffset = qMax<qreal>(0, (height() - 630) / 2.0);
-    const qreal visibleTimeOffset = qMin(preferredTimeOffset,
-        qMax<qreal>(0, timeBottom - timeHeight - centeredTimeTop));
-    QRectF timeRect(0, centeredTimeTop + visibleTimeOffset, width(), timeHeight);
-    const qreal timeCardWidth = qBound<qreal>(300, timeMetrics.horizontalAdvance(timeStr) + 130, 420);
-    const QRectF timeCard(ringCenterX_ - timeCardWidth / 2.0, timeRect.top() - 30,
-                          timeCardWidth, timeRect.height() + 60);
-    painter.setBrush(QColor(255, 255, 255, 32));
-    painter.setPen(QPen(QColor(255, 255, 255, 64), 1));
-    painter.drawRoundedRect(timeCard, 22, 22);
-    painter.setFont(QFont("Microsoft YaHei", 9, QFont::DemiBold));
-    painter.setPen(QColor(247, 255, 247, 175));
-    painter.drawText(QRectF(timeCard.left(), timeCard.top() + 8, timeCard.width(), 18),
-                     Qt::AlignCenter, isStopwatch_ ? QStringLiteral("正计时")
-                                                    : QStringLiteral("本次专注时长"));
+    const qreal timeTop = qMin(tagRect_.bottom() + 24, height() - timeHeight - 12);
+    const QRectF timeRect(0, timeTop, width(), timeHeight);
     painter.setFont(timeFont);
     painter.setPen(QColor("#F7FFF7"));
     painter.drawText(timeRect, Qt::AlignCenter, timeStr);
@@ -465,9 +481,6 @@ void PlantTimerWidget::paintEvent(QPaintEvent*)
         painter.setFont(oathFont);
         painter.setPen(QColor("#F2F4C6"));
         QRectF oathRect(0, ringCenterY_ - ringRadius_ - 34, width(), 25);
-        painter.setBrush(QColor(43, 108, 84, 45));
-        painter.setPen(Qt::NoPen);
-        painter.drawRoundedRect(oathRect.adjusted(width() * 0.30, -2, -width() * 0.30, 2), 12, 12);
         painter.setPen(QColor("#F2F4C6"));
         painter.drawText(oathRect, Qt::AlignCenter, topText);
     }

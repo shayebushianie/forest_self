@@ -1,8 +1,9 @@
-#ifndef CHALLENGEDASHBOARDWIDGET_H
+﻿#ifndef CHALLENGEDASHBOARDWIDGET_H
 #define CHALLENGEDASHBOARDWIDGET_H
 
 #include <QColor>
 #include <QDate>
+#include <QHash>
 #include <QPixmap>
 #include <QRectF>
 #include <QVector>
@@ -14,6 +15,7 @@
 
 class QPainter;
 class QRectF;
+class QToolButton;
 
 // Desktop game-like challenge center for rewards, daily check-in, and tasks.
 class ChallengeDashboardWidget : public QWidget {
@@ -35,9 +37,7 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void leaveEvent(QEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     enum class HitRole {
@@ -115,11 +115,13 @@ private:
     void saveRewardState() const;
     static QString boolVectorToString(const QVector<bool>& values);
     static QVector<bool> boolVectorFromString(const QString& text, int size);
-    void rebuildCursor(const QPoint& pos);
-    const HitRegion* hitAt(const QPoint& pos) const;
     void addHit(const QRectF& rect, HitRole role, int index = -1, const QString& tooltip = QString()) const;
     QString hitKey(HitRole role, int index) const;
     bool isHovered(HitRole role, int index = -1) const;
+    QToolButton* actionButton(HitRole role, int index, const QString& tooltip);
+    void syncActionButtons();
+    void activate(HitRole role, int index);
+    void drawActionStates(QPainter& painter) const;
     int completionPercent(int progress, int target) const;
     void claimMonthlyReward(const DataModel& data);
     void claimCheckinReward(const DataModel& data, int index);
@@ -154,7 +156,7 @@ private:
     QVector<Challenge> challenges_;
     std::vector<FocusRecord> records_;
     mutable QVector<HitRegion> hitRegions_;
-    QString hoverKey_;
+    QHash<QString, QToolButton*> actionButtons_;
     QVector<bool> taskClaimed_;
     QVector<bool> checkinClaimed_;
     bool monthlyClaimed_ = false;

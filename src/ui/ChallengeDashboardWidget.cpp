@@ -1,13 +1,16 @@
-#include "ui/ChallengeDashboardWidget.h"
+﻿#include "ui/ChallengeDashboardWidget.h"
 
 #include "config/PlantCatalog.h"
 #include "config/UserPreferences.h"
+#include "ui/AppStyle.h"
 #include "ui/PlantImageUtils.h"
 #include "ui/DialogPresenter.h"
+#include "ui/PaintedActionButton.h"
 
 #include <QApplication>
 #include <QDateTime>
 #include <QDialog>
+#include <QEvent>
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -20,7 +23,9 @@
 #include <QRadialGradient>
 #include <QTime>
 #include <QToolTip>
+#include <QToolButton>
 #include <QVBoxLayout>
+#include <QSet>
 #include <algorithm>
 
 ChallengeDashboardWidget::ChallengeDashboardWidget(QWidget* parent)
@@ -247,24 +252,37 @@ void ChallengeDashboardWidget::paintEvent(QPaintEvent*)
     }
     drawCheckinCard(painter, checkin, data);
     drawTaskPanel(painter, tasks, data);
+    syncActionButtons();
+    drawActionStates(painter);
 }
 
-void ChallengeDashboardWidget::mouseMoveEvent(QMouseEvent* event)
+bool ChallengeDashboardWidget::eventFilter(QObject* watched, QEvent* event)
 {
-    rebuildCursor(event->pos());
+    if (actionButtons_.values().contains(qobject_cast<QToolButton*>(watched))) {
+        switch (event->type()) {
+        case QEvent::Enter:
+        case QEvent::Leave:
+        case QEvent::FocusIn:
+        case QEvent::FocusOut:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+            update();
+            break;
+        default:
+            break;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
-void ChallengeDashboardWidget::mouseReleaseEvent(QMouseEvent* event)
+void ChallengeDashboardWidget::activate(HitRole role, int index)
 {
     resetDailyStateIfNeeded();
-    const HitRegion* hit = hitAt(event->pos());
-    if (!hit) return;
-
     const DataModel data = buildData();
-    switch (hit->role) {
+    switch (role) {
     case HitRole::Coin:
     case HitRole::Growth:
-        showResourceDialog(hit->role, data);
+        showResourceDialog(role, data);
         break;
     case HitRole::MonthlyCard:
     case HitRole::MonthlyProgress:
@@ -283,63 +301,24 @@ void ChallengeDashboardWidget::mouseReleaseEvent(QMouseEvent* event)
         showRefreshDialog(false);
         break;
     case HitRole::CheckinReward:
-        claimCheckinReward(data, hit->index);
+        claimCheckinReward(data, index);
         break;
     case HitRole::TaskCard:
     case HitRole::TaskProgress:
-        showTaskDialog(data, hit->index);
+        showTaskDialog(data, index);
         break;
     case HitRole::TaskChest:
-        claimTaskReward(data, hit->index);
+        claimTaskReward(data, index);
         break;
     case HitRole::TaskPlus:
-        if (hit->index >= 0 && hit->index < data.tasks.size()) showPlusDialog(data.tasks[hit->index]);
+        if (index >= 0 && index < data.tasks.size()) showPlusDialog(data.tasks[index]);
         break;
     case HitRole::TaskArrow:
-        if (hit->index >= 0 && hit->index < data.tasks.size()) routeTaskAction(data.tasks[hit->index]);
+        if (index >= 0 && index < data.tasks.size()) routeTaskAction(data.tasks[index]);
         break;
     default:
         break;
     }
-}
-
-void ChallengeDashboardWidget::leaveEvent(QEvent*)
-{
-    if (!hoverKey_.isEmpty()) {
-        hoverKey_.clear();
-        unsetCursor();
-        QToolTip::hideText();
-        update();
-    }
-}
-
-void ChallengeDashboardWidget::rebuildCursor(const QPoint& pos)
-{
-    const HitRegion* hit = hitAt(pos);
-    const QString nextKey = hit ? hitKey(hit->role, hit->index) : QString();
-    if (nextKey != hoverKey_) {
-        hoverKey_ = nextKey;
-        update();
-    }
-    if (hit) {
-        setCursor(Qt::PointingHandCursor);
-        if (!hit->tooltip.isEmpty()) {
-            QToolTip::showText(mapToGlobal(pos + QPoint(12, 18)), hit->tooltip, this);
-        }
-    } else {
-        unsetCursor();
-        QToolTip::hideText();
-    }
-}
-
-const ChallengeDashboardWidget::HitRegion* ChallengeDashboardWidget::hitAt(const QPoint& pos) const
-{
-    for (int i = hitRegions_.size() - 1; i >= 0; --i) {
-        if (hitRegions_[i].rect.contains(pos)) {
-            return &hitRegions_[i];
-        }
-    }
-    return nullptr;
 }
 
 void ChallengeDashboardWidget::addHit(const QRectF& rect, HitRole role, int index, const QString& tooltip) const
@@ -354,7 +333,69 @@ QString ChallengeDashboardWidget::hitKey(HitRole role, int index) const
 
 bool ChallengeDashboardWidget::isHovered(HitRole role, int index) const
 {
-    return hoverKey_ == hitKey(role, index);
+    const QToolButton* button = actionButtons_.value(hitKey(role, index));
+    return button && (button->underMouse() || AppStyle::keyboardFocusVisible(button));
+}
+
+QToolButton* ChallengeDashboardWidget::actionButton(HitRole role, int index, const QString& tooltip)
+{
+    const QString key = hitKey(role, index);
+    if (QToolButton* existing = actionButtons_.value(key)) return existing;
+    auto* button = new PaintedActionButton(this);
+    button->setObjectName(QStringLiteral("challengeAction_%1").arg(key));
+    button->setAccessibleName(tooltip.isEmpty() ? QStringLiteral("挑战操作") : tooltip);
+    button->setToolTip(tooltip);
+    button->setFocusPolicy(Qt::StrongFocus);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setAutoRaise(true);
+    button->setStyleSheet(QStringLiteral("QToolButton { background: transparent; border: 0; }"));
+    button->setVisible(false);
+    button->installEventFilter(this);
+    connect(button, &QToolButton::clicked, this, [this, role, index] { activate(role, index); });
+    actionButtons_.insert(key, button);
+    return button;
+}
+
+void ChallengeDashboardWidget::syncActionButtons()
+{
+    QSet<QString> active;
+    for (const HitRegion& hit : hitRegions_) {
+        const QString key = hitKey(hit.role, hit.index);
+        active.insert(key);
+        QToolButton* button = actionButton(hit.role, hit.index, hit.tooltip);
+        button->setAccessibleName(hit.tooltip.isEmpty() ? QStringLiteral("挑战操作") : hit.tooltip);
+        button->setToolTip(hit.tooltip);
+        button->setGeometry(hit.rect.toAlignedRect());
+        button->show();
+        button->raise();
+    }
+    for (auto it = actionButtons_.cbegin(); it != actionButtons_.cend(); ++it) {
+        if (!active.contains(it.key())) it.value()->hide();
+    }
+}
+
+void ChallengeDashboardWidget::drawActionStates(QPainter& painter) const
+{
+    painter.save();
+    for (QToolButton* button : actionButtons_) {
+        if (!button->isVisible()) continue;
+        const QRectF actionRect(button->geometry());
+        if (button->isDown()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(14, 111, 103, 42));
+            painter.drawRoundedRect(actionRect.adjusted(1, 1, -1, -1), 13, 13);
+        } else if (button->underMouse()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(255, 255, 255, 34));
+            painter.drawRoundedRect(actionRect.adjusted(1, 1, -1, -1), 13, 13);
+        }
+        if (AppStyle::keyboardFocusVisible(button)) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor("#D4B844"));
+            painter.drawEllipse(actionRect.topLeft() + QPointF(8, 8), 3.5, 3.5);
+        }
+    }
+    painter.restore();
 }
 
 int ChallengeDashboardWidget::completionPercent(int progress, int target) const

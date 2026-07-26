@@ -10,7 +10,7 @@ class QPushButton;
 class QStackedWidget;
 class QWidget;
 
-// Owns side bar labels, active styling, page selection, and collapse animation.
+// Owns side bar labels, active styling, page selection, and collapse state.
 class SidebarNavigation final {
 public:
     struct Item {
@@ -26,6 +26,7 @@ public:
     bool switchTo(int pageIndex, const std::function<void(int)>& onPageActivated);
     void toggle(uint32_t coinBalance);
     void setCoinBalance(uint32_t coinBalance);
+    void setReducedMotion(bool reducedMotion);
 
 private:
     void applyLabels();

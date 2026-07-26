@@ -5,11 +5,13 @@
 #include "core/CoinManager.h"
 #include "core/FocusResultService.h"
 #include "core/GachaManager.h"
+#include "ui/GachaDigSiteWidget.h"
 #include "ui/PlantImageUtils.h"
 #include "ui/DialogPresenter.h"
 
 #include <QColor>
 #include <QFrame>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QImage>
 #include <QLabel>
@@ -45,13 +47,40 @@ QPixmap variantPixmap(const GachaManager::VariantDef& variant, const QSize& targ
     return QPixmap::fromImage(image).scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
-void clearLayout(QVBoxLayout* layout)
+void clearLayout(QLayout* layout)
 {
     while (layout && layout->count() > 0) {
         QLayoutItem* item = layout->takeAt(0);
         if (item->widget()) item->widget()->deleteLater();
         delete item;
     }
+}
+
+void clearDetachedCardGrid(QGridLayout* layout)
+{
+    while (layout && layout->count() > 0) {
+        QLayoutItem* item = layout->takeAt(0);
+        delete item->widget();
+        delete item;
+    }
+}
+
+QPixmap lockedVariantPixmap(const GachaManager::VariantDef& variant, const QSize& targetSize)
+{
+    QPixmap pixmap = variantPixmap(variant, targetSize);
+    if (pixmap.isNull()) return {};
+    QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+    for (int y = 0; y < image.height(); ++y) {
+        QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+        for (int x = 0; x < image.width(); ++x) {
+            const int alpha = qAlpha(line[x]);
+            if (alpha == 0) continue;
+            const int shade = (qRed(line[x]) + qGreen(line[x]) + qBlue(line[x])) / 3;
+            const int muted = qBound(72, shade / 3 + 72, 132);
+            line[x] = qRgba(muted - 18, muted, muted - 10, qMin(alpha, 150));
+        }
+    }
+    return QPixmap::fromImage(image);
 }
 
 } // namespace
@@ -148,9 +177,7 @@ AchievementsPageController::AchievementsPageController(AchievementEngine& achiev
     page_ = new QWidget(parent);
     page_->setObjectName("achievementsPage");
     page_->setStyleSheet(
-        "QWidget#achievementsPage { background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #58AD8F, stop:0.65 #4FA286, stop:1 #4A907B); }"
-        "QFrame[ach=\"true\"] { background-color:rgba(255,255,255,42); border:1px solid rgba(255,255,255,78); border-radius:10px; }"
-        "QFrame[ach=\"true\"][unlocked=\"true\"] { background-color:rgba(242,244,198,60); border:2px solid #D8B257; }");
+        "QWidget#achievementsPage { background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #58AD8F, stop:0.65 #4FA286, stop:1 #4A907B); }");
     auto* layout = new QVBoxLayout(page_);
     layout->setContentsMargins(20, 20, 20, 20);
     layout->setSpacing(12);
@@ -185,8 +212,10 @@ void AchievementsPageController::refresh()
         const auto& definition = achievements_.all()[index];
         const bool unlocked = achievements_.isUnlocked(index);
         auto* card = new QFrame(parentWidget);
-        card->setProperty("ach", "true");
-        card->setProperty("unlocked", unlocked ? "true" : "false");
+        card->setObjectName("achievementCard");
+        card->setStyleSheet(unlocked
+            ? "QFrame#achievementCard { background-color:rgba(255,250,220,238); border:2px solid #B68B2E; border-radius:10px; }"
+            : "QFrame#achievementCard { background-color:rgba(247,255,247,225); border:1px solid rgba(45,91,70,90); border-radius:10px; }");
         auto* row = new QHBoxLayout(card);
         row->setContentsMargins(16, 14, 16, 14);
         row->setSpacing(14);
@@ -198,21 +227,22 @@ void AchievementsPageController::refresh()
         auto* text = new QVBoxLayout;
         text->setSpacing(4);
         auto* name = new QLabel(definition.name, card);
-        name->setStyleSheet(QStringLiteral("font-weight:bold; font-size:15px; color:%1; background:transparent; border:none;").arg(unlocked ? "#F7FFF7" : "rgba(247,255,247,140)"));
+        name->setStyleSheet(QStringLiteral("font-weight:bold; font-size:15px; color:%1; background:transparent; border:none;").arg(unlocked ? "#5A4518" : "#244538"));
         text->addWidget(name);
         auto* description = new QLabel(definition.description, card);
+        description->setObjectName("achievementDescription");
         description->setWordWrap(true);
-        description->setStyleSheet(QStringLiteral("font-size:12px; color:%1; background:transparent; border:none;").arg(unlocked ? "rgba(247,255,247,210)" : "rgba(247,255,247,100)"));
+        description->setStyleSheet(QStringLiteral("font-size:12px; color:%1; background:transparent; border:none;").arg(unlocked ? "#5A4518" : "#315747"));
         text->addWidget(description);
         auto* reward = new QLabel(QStringLiteral("奖励：🪙 %1").arg(definition.rewardCoins), card);
-        reward->setStyleSheet(QStringLiteral("font-size:12px; font-weight:800; color:%1; background:transparent; border:none;").arg(unlocked ? "#F2F4C6" : "rgba(242,244,198,130)"));
+        reward->setStyleSheet(QStringLiteral("font-size:12px; font-weight:800; color:%1; background:transparent; border:none;").arg(unlocked ? "#8A641B" : "#315747"));
         text->addWidget(reward);
         row->addLayout(text, 1);
         auto* state = new QLabel(unlocked ? QStringLiteral("✓ 已获得\n奖励已发放")
                                           : QStringLiteral("🔒 未解锁\n完成条件后发放"), card);
         state->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        state->setStyleSheet(unlocked ? "color:#D8B257; font-weight:bold; font-size:13px; background:transparent; border:none;"
-                                      : "font-size:13px; background:transparent; border:none; color:rgba(247,255,247,140);");
+        state->setStyleSheet(unlocked ? "color:#5A4518; font-weight:bold; font-size:13px; background:transparent; border:none;"
+                                      : "font-size:13px; background:transparent; border:none; color:#315747;");
         row->addWidget(state);
         itemsLayout_->addWidget(card);
     }
@@ -226,103 +256,214 @@ GachaPageController::GachaPageController(CoinManager& coins, GachaManager& gacha
     page_ = new QWidget(parent);
     page_->setObjectName("gachaPage");
     page_->setStyleSheet(
-        "QWidget#gachaPage { background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #58AD8F, stop:0.62 #4FA286, stop:1 #4A907B); }"
-        "QFrame[panel=\"true\"] { background-color:rgba(255,255,255,34); border:1px solid rgba(255,255,255,72); border-radius:8px; }"
-        "QLabel[title=\"true\"] { color:#F7FFF7; font-size:20px; font-weight:900; background:transparent; border:none; }"
-        "QLabel[subtle=\"true\"] { color:rgba(247,255,247,180); font-size:13px; background:transparent; border:none; }");
+        "QWidget#gachaPage { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+        " stop:0 #3D8A72, stop:0.52 #58AA8C, stop:1 #78BDA6); }"
+        "QFrame#gachaDigPanel, QFrame#gachaCollectionPanel { background:rgba(244,249,224,34);"
+        " border:1px solid rgba(236,247,216,92); border-radius:20px; }"
+        "QFrame#gachaResultCard { background:rgba(249,250,225,205); border:1px solid rgba(82,126,91,92);"
+        " border-radius:14px; }"
+        "QLabel[gachaTitle=\"true\"] { color:#F8F8D9; font-size:22px; font-weight:900;"
+        " background:transparent; border:none; }"
+        "QLabel[gachaSubtitle=\"true\"] { color:rgba(244,249,226,190); font-size:13px;"
+        " background:transparent; border:none; }"
+        "QLabel[gachaMetric=\"true\"] { color:#315747; background:rgba(249,250,225,210);"
+        " border:1px solid rgba(72,121,88,70); border-radius:12px; padding:7px 11px; font-weight:800; }"
+        "QFrame#gachaVariantCard { background:rgba(250,250,228,226);"
+        " border:1px solid rgba(70,118,84,82); border-radius:15px; }"
+        "QFrame#gachaVariantCard:hover { background:#FAFBE7; border-color:#4E9B72; }"
+        "QFrame#gachaVariantCard QLabel { background:transparent; border:none; }");
     auto* layout = new QVBoxLayout(page_);
-    layout->setContentsMargins(26, 22, 26, 22);
-    layout->setSpacing(16);
-    auto* header = new QLabel(QStringLiteral("✨ 异色发掘"), page_);
-    header->setProperty("title", "true");
-    layout->addWidget(header);
+    layout->setContentsMargins(26, 20, 26, 22);
+    layout->setSpacing(14);
+
+    auto* headerRow = new QHBoxLayout;
+    auto* headerText = new QVBoxLayout;
+    headerText->setSpacing(2);
+    auto* header = new QLabel(QStringLiteral("异色发掘"), page_);
+    header->setProperty("gachaTitle", "true");
+    auto* subtitle = new QLabel(QStringLiteral("消耗金币随机获取异色植物。"), page_);
+    subtitle->setProperty("gachaSubtitle", "true");
+    headerText->addWidget(header);
+    headerText->addWidget(subtitle);
+    headerRow->addLayout(headerText);
+    headerRow->addStretch();
+    collectionProgress_ = new QLabel(page_);
+    collectionProgress_->setProperty("gachaMetric", "true");
+    headerRow->addWidget(collectionProgress_);
+    layout->addLayout(headerRow);
+
     auto* body = new QHBoxLayout;
-    body->setSpacing(16);
+    body->setSpacing(18);
+
     auto* digPanel = new QFrame(page_);
-    digPanel->setProperty("uiCard", true);
+    digPanel->setObjectName("gachaDigPanel");
     auto* dig = new QVBoxLayout(digPanel);
-    dig->setContentsMargins(24, 22, 24, 22);
-    dig->setSpacing(12);
-    dig->addStretch();
-    auto* icon = new QLabel(QStringLiteral("⛏️"), digPanel);
-    icon->setAlignment(Qt::AlignCenter);
-    icon->setStyleSheet("font-size:72px; color:#F7FFF7; background:transparent; border:none;");
-    dig->addWidget(icon);
-    auto* cost = new QLabel(QStringLiteral("每次发掘消耗 🪙 %1").arg(GachaManager::pullCost()), digPanel);
-    cost->setAlignment(Qt::AlignCenter); cost->setProperty("subtle", "true"); dig->addWidget(cost);
-    coinLabel_ = new QLabel(digPanel); coinLabel_->setAlignment(Qt::AlignCenter); coinLabel_->setProperty("subtle", "true"); dig->addWidget(coinLabel_);
-    refundLabel_ = new QLabel(digPanel); refundLabel_->setAlignment(Qt::AlignCenter); refundLabel_->setProperty("subtle", "true"); dig->addWidget(refundLabel_);
+    dig->setContentsMargins(16, 16, 16, 16);
+    dig->setSpacing(10);
+    digSite_ = new GachaDigSiteWidget(digPanel);
+    dig->addWidget(digSite_, 1);
+
+    auto* metrics = new QHBoxLayout;
+    metrics->setSpacing(8);
+    auto* cost = new QLabel(QStringLiteral("单次消耗 %1").arg(GachaManager::pullCost()), digPanel);
+    cost->setProperty("gachaMetric", "true");
+    cost->setAlignment(Qt::AlignCenter);
+    coinLabel_ = new QLabel(digPanel);
+    coinLabel_->setProperty("gachaMetric", "true");
+    coinLabel_->setAlignment(Qt::AlignCenter);
+    refundLabel_ = new QLabel(digPanel);
+    refundLabel_->setProperty("gachaMetric", "true");
+    refundLabel_->setAlignment(Qt::AlignCenter);
+    metrics->addWidget(cost);
+    metrics->addWidget(coinLabel_);
+    metrics->addWidget(refundLabel_);
+    dig->addLayout(metrics);
+
     auto* digButton = new QPushButton(QStringLiteral("开始发掘"), digPanel);
-    digButton->setCursor(Qt::PointingHandCursor); digButton->setMinimumHeight(46);
+    digButton->setCursor(Qt::PointingHandCursor);
+    digButton->setMinimumHeight(48);
     digButton->setObjectName("btnPrimary");
     digButton->setProperty("testId", QStringLiteral("gachaPullButton"));
     dig->addWidget(digButton);
-    resultIcon_ = new QLabel(digPanel); resultIcon_->setFixedHeight(100); resultIcon_->setAlignment(Qt::AlignCenter); resultIcon_->setStyleSheet("font-size:48px; background:transparent; border:none;"); dig->addWidget(resultIcon_);
-    resultTitle_ = new QLabel(QStringLiteral("准备发掘新的异色树种"), digPanel); resultTitle_->setObjectName("gachaResultTitle"); resultTitle_->setMinimumHeight(28); resultTitle_->setAlignment(Qt::AlignCenter); resultTitle_->setWordWrap(true); resultTitle_->setStyleSheet("color:#F7FFF7; font-size:17px; font-weight:900; background:transparent; border:none;"); dig->addWidget(resultTitle_);
-    resultDescription_ = new QLabel(QStringLiteral("重复获得会返还 🪙 %1").arg(GachaManager::duplicateCoinRefund()), digPanel); resultDescription_->setMinimumHeight(54); resultDescription_->setAlignment(Qt::AlignCenter); resultDescription_->setWordWrap(true); resultDescription_->setProperty("subtle", "true"); dig->addWidget(resultDescription_);
-    dig->addStretch();
+
+    auto* resultCard = new QFrame(digPanel);
+    resultCard->setObjectName("gachaResultCard");
+    auto* resultLayout = new QVBoxLayout(resultCard);
+    resultLayout->setContentsMargins(16, 11, 16, 12);
+    resultLayout->setSpacing(3);
+    resultTitle_ = new QLabel(QStringLiteral("等待发掘"), resultCard);
+    resultTitle_->setObjectName("gachaResultTitle");
+    resultTitle_->setAlignment(Qt::AlignCenter);
+    resultTitle_->setStyleSheet("color:#315747; font-size:17px; font-weight:900; background:transparent;");
+    resultDescription_ = new QLabel(QStringLiteral("点击开始发掘，结果将显示在发掘地。"), resultCard);
+    resultDescription_->setMinimumHeight(34);
+    resultDescription_->setAlignment(Qt::AlignCenter);
+    resultDescription_->setWordWrap(true);
+    resultDescription_->setStyleSheet("color:#567264; font-size:12px; font-weight:600; background:transparent;");
+    resultLayout->addWidget(resultTitle_);
+    resultLayout->addWidget(resultDescription_);
+    dig->addWidget(resultCard);
+
     auto* collectionPanel = new QFrame(page_);
-    collectionPanel->setProperty("uiCard", true);
+    collectionPanel->setObjectName("gachaCollectionPanel");
     auto* collection = new QVBoxLayout(collectionPanel);
-    collection->setContentsMargins(18, 16, 18, 16); collection->setSpacing(10);
-    auto* collectionTitle = new QLabel(QStringLiteral("异色收藏"), collectionPanel); collectionTitle->setProperty("title", "true"); collection->addWidget(collectionTitle);
-    auto* scroll = new QScrollArea(collectionPanel); scroll->setWidgetResizable(true); scroll->setStyleSheet("QScrollArea { background:transparent; border:none; }");
-    auto* content = new QWidget(scroll); content->setStyleSheet("background:transparent; border:none;");
-    variantsLayout_ = new QVBoxLayout(content); variantsLayout_->setContentsMargins(0, 0, 0, 0); variantsLayout_->setSpacing(8);
-    scroll->setWidget(content); collection->addWidget(scroll, 1);
-    body->addWidget(digPanel, 3); body->addWidget(collectionPanel, 4); layout->addLayout(body, 1);
+    collection->setContentsMargins(16, 14, 16, 16);
+    collection->setSpacing(10);
+    auto* collectionTitle = new QLabel(QStringLiteral("异色图鉴"), collectionPanel);
+    collectionTitle->setProperty("gachaTitle", "true");
+    collectionTitle->setStyleSheet("font-size:18px;");
+    collection->addWidget(collectionTitle);
+    auto* scroll = new QScrollArea(collectionPanel);
+    scroll->setWidgetResizable(true);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setStyleSheet("QScrollArea { background:transparent; border:none; }"
+                          "QScrollArea > QWidget > QWidget { background:transparent; }");
+    auto* content = new QWidget(scroll);
+    content->setObjectName("gachaCollectionGrid");
+    content->setStyleSheet("QWidget#gachaCollectionGrid { background:transparent; border:none; }");
+    variantsLayout_ = new QGridLayout(content);
+    variantsLayout_->setContentsMargins(2, 2, 2, 2);
+    variantsLayout_->setHorizontalSpacing(10);
+    variantsLayout_->setVerticalSpacing(10);
+    for (int column = 0; column < 4; ++column) variantsLayout_->setColumnStretch(column, 1);
+    scroll->setWidget(content);
+    collection->addWidget(scroll, 1);
+
+    body->addWidget(digPanel, 5);
+    body->addWidget(collectionPanel, 6);
+    layout->addLayout(body, 1);
+
     connect(digButton, &QPushButton::clicked, this, [this]() {
         if (coins_.balance() < static_cast<uint32_t>(GachaManager::pullCost())) {
-            DialogPresenter::information(page_, QStringLiteral("余额不足"), QStringLiteral("需要 🪙 %1 才能发掘。").arg(GachaManager::pullCost()));
+            DialogPresenter::information(page_, QStringLiteral("余额不足"),
+                                         QStringLiteral("发掘需要 %1 金币。").arg(GachaManager::pullCost()));
             return;
         }
         const auto result = gacha_.pull(coins_);
         if (!result.success) {
-            resultIcon_->setText(QStringLiteral("!"));
-            resultTitle_->setText(QStringLiteral("发掘未完成"));
-            resultDescription_->setText(QStringLiteral("本次没有获得新异色，请稍后重试。"));
+            digSite_->clearDiscoveredPlant();
+            resultTitle_->setText(QStringLiteral("发掘失败"));
+            resultDescription_->setText(QStringLiteral("未能保存本次发掘结果。"));
             refresh();
             return;
         }
+        const GachaManager::VariantDef* discovered = nullptr;
         for (const auto& variant : gacha_.allVariants()) {
             if (variant.id != result.variantId) continue;
-            const QPixmap pixmap = variantPixmap(variant, QSize(92, 92));
-            if (!pixmap.isNull()) resultIcon_->setPixmap(pixmap); else resultIcon_->setText(result.icon);
+            discovered = &variant;
             break;
         }
+        if (discovered) {
+            const QColor accent(discovered->tintColor);
+            digSite_->setDiscoveredPlant(variantPixmap(*discovered, QSize(190, 190)), accent);
+        }
         if (result.isNew) {
-            resultTitle_->setText(QStringLiteral("新异色获得"));
-            resultDescription_->setText(QStringLiteral("%1（%2）已解锁\n%3").arg(result.displayName, result.rarity, result.description));
+            resultTitle_->setText(QStringLiteral("获得新异色"));
+            resultDescription_->setText(QStringLiteral("%1 · %2\n%3")
+                                            .arg(result.displayName, result.rarity, result.description));
         } else {
-            resultTitle_->setText(QStringLiteral("重复获得，已返还金币"));
-            resultDescription_->setText(QStringLiteral("%1，返还 🪙 %2\n%3").arg(result.displayName).arg(result.coinRefund).arg(result.description));
+            resultTitle_->setText(QStringLiteral("获得重复异色"));
+            resultDescription_->setText(QStringLiteral("%1 · 已返还 %2 金币\n%3")
+                                            .arg(result.displayName).arg(result.coinRefund).arg(result.description));
         }
         refresh();
         focusResults_.evaluateAchievements();
         emit achievementsChanged();
     });
     refresh();
+    for (const auto& variant : gacha_.allVariants()) {
+        if (!variant.unlocked) continue;
+        const QColor accent(variant.tintColor);
+        digSite_->setDiscoveredPlant(variantPixmap(variant, QSize(190, 190)), accent);
+        resultTitle_->setText(QStringLiteral("已发现异色"));
+        resultDescription_->setText(QStringLiteral("%1 · %2\n%3")
+                                        .arg(variant.displayName, variant.rarity, variant.description));
+        break;
+    }
 }
 
 void GachaPageController::refresh()
 {
-    coinLabel_->setText(QStringLiteral("当前金币：🪙 %1").arg(coins_.balance()));
-    refundLabel_->setText(QStringLiteral("重复异色返还：🪙 %1").arg(GachaManager::duplicateCoinRefund()));
-    clearLayout(variantsLayout_);
+    coinLabel_->setText(QStringLiteral("金币 %1").arg(coins_.balance()));
+    refundLabel_->setText(QStringLiteral("重复返还 %1").arg(GachaManager::duplicateCoinRefund()));
+    collectionProgress_->setText(QStringLiteral("已发现 %1 / %2")
+                                     .arg(gacha_.unlockedCount()).arg(gacha_.variantCount()));
+    clearDetachedCardGrid(variantsLayout_);
+    QWidget* grid = variantsLayout_->parentWidget();
+    int index = 0;
     for (const auto& variant : gacha_.allVariants()) {
-        auto* row = new QFrame;
-        row->setProperty("uiCard", true);
-        auto* layout = new QHBoxLayout(row); layout->setContentsMargins(12, 10, 12, 10); layout->setSpacing(10);
-        auto* icon = new QLabel(row); icon->setAlignment(Qt::AlignCenter); icon->setFixedSize(58, 58); icon->setStyleSheet("background:transparent; border:none;");
+        auto* card = new QFrame(grid);
+        card->setObjectName("gachaVariantCard");
+        card->setProperty("gachaVariantCard", true);
+        card->setMinimumSize(118, 150);
+        auto* cardLayout = new QVBoxLayout(card);
+        cardLayout->setContentsMargins(9, 9, 9, 10);
+        cardLayout->setSpacing(4);
+        auto* icon = new QLabel(card);
+        icon->setAlignment(Qt::AlignCenter);
+        icon->setMinimumHeight(82);
+        icon->setStyleSheet("background:transparent; border:none;");
         if (variant.unlocked) {
-            const QPixmap pixmap = variantPixmap(variant, QSize(52, 52));
-            if (!pixmap.isNull()) icon->setPixmap(pixmap); else { icon->setText(variant.icon); icon->setStyleSheet("font-size:24px; background:transparent; border:none;"); }
-        } else { icon->setText(QStringLiteral("？")); icon->setStyleSheet("font-size:24px; color:rgba(247,255,247,150); background:transparent; border:none;"); }
-        auto* text = new QVBoxLayout; text->setContentsMargins(0, 0, 0, 0); text->setSpacing(3);
-        auto* name = new QLabel(variant.unlocked ? variant.displayName : QStringLiteral("未发现异色"), row); name->setStyleSheet("color:#F7FFF7; font-size:14px; font-weight:800; background:transparent; border:none;"); text->addWidget(name);
-        if (variant.unlocked) { auto* description = new QLabel(variant.description, row); description->setWordWrap(true); description->setStyleSheet("color:rgba(247,255,247,175); font-size:12px; font-weight:500; background:transparent; border:none;"); text->addWidget(description); }
-        auto* state = new QLabel(variant.unlocked ? QStringLiteral("%1\n已解锁").arg(variant.rarity) : QStringLiteral("待发现"), row); state->setAlignment(Qt::AlignRight | Qt::AlignVCenter); state->setStyleSheet("color:rgba(247,255,247,170); font-size:12px; background:transparent; border:none;");
-        layout->addWidget(icon); layout->addLayout(text, 1); layout->addWidget(state); variantsLayout_->addWidget(row);
+            icon->setPixmap(variantPixmap(variant, QSize(80, 80)));
+        } else {
+            icon->setPixmap(lockedVariantPixmap(variant, QSize(76, 76)));
+        }
+        auto* name = new QLabel(variant.unlocked ? variant.displayName : QStringLiteral("未发现"), card);
+        name->setAlignment(Qt::AlignCenter);
+        name->setWordWrap(true);
+        name->setStyleSheet("color:#315747; font-size:13px; font-weight:900; background:transparent;");
+        cardLayout->addWidget(icon, 1);
+        cardLayout->addWidget(name);
+        if (variant.unlocked) {
+            auto* state = new QLabel(variant.rarity, card);
+            state->setAlignment(Qt::AlignCenter);
+            state->setStyleSheet(QStringLiteral("color:%1; font-size:11px; font-weight:700;"
+                                                " background:transparent;")
+                                     .arg(variant.tintColor));
+            cardLayout->addWidget(state);
+        }
+        variantsLayout_->addWidget(card, index / 4, index % 4);
+        ++index;
     }
-    variantsLayout_->addStretch();
+    variantsLayout_->setRowStretch((index + 3) / 4, 1);
 }

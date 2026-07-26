@@ -54,7 +54,10 @@ set(FOREST_APP_SOURCES
     src/ui/SocialPages.cpp
     src/ui/SidebarNavigation.cpp
     src/ui/AppStyle.cpp
+    src/ui/SettingsPage.cpp
+    src/ui/SproutToggle.cpp
     src/ui/PlantImageUtils.cpp
+    src/ui/GachaDigSiteWidget.cpp
     src/ui/PlantTimerWidget.cpp
     src/ui/GardenCanvas.cpp
     src/ui/ForestDashboardWidget.cpp

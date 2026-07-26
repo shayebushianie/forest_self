@@ -41,9 +41,9 @@ int failStartup(const QString& title, const QString& detail)
 int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
+    AppStyle::installFocusVisibility(app);
     QCoreApplication::setOrganizationName(QStringLiteral("Forest"));
     QCoreApplication::setApplicationName(QStringLiteral("Forest"));
-    AppStyle::installSmoothInteractions(app);
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
     app.setStyleSheet(AppStyle::styleSheet());
@@ -85,6 +85,9 @@ int main(int argc, char* argv[])
         return failStartup(QStringLiteral("Forest 偏好设置无法打开"),
                            UserPreferences::instance().lastError());
     }
+    const auto accessibility = UserPreferences::instance().accessibilityOptions();
+    app.setStyleSheet(AppStyle::styleSheet(accessibility.fontScalePercent,
+                                           accessibility.highContrast));
 
     // Account data is shared by all users and is migrated once from old builds.
     PathConfig::migrateLegacyFileToAppData("users.dat");

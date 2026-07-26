@@ -33,6 +33,7 @@
 #include "ui/FocusPageState.h"
 #include "ui/AppStyle.h"
 #include "ui/DialogPresenter.h"
+#include "ui/SettingsPage.h"
 #include "system/RuleEngine.h"
 #include "system/SystemMonitor.h"
 #include "storage/DatabaseManager.h"
@@ -52,7 +53,6 @@
 #include <QScrollArea>
 #include <QRadioButton>
 #include <QFontMetrics>
-#include <QGroupBox>
 #include <QCheckBox>
 #include <utility>
 #include <QGridLayout>
@@ -63,6 +63,7 @@
 #include <QImage>
 #include <QColor>
 #include <QScreen>
+#include <QSignalBlocker>
 #include <QEvent>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -116,12 +117,10 @@ protected:
         painter.setBrush(fill);
         painter.drawRoundedRect(bounds, bounds.height() / 2.0, bounds.height() / 2.0);
 
-        if (hasFocus()) {
-            painter.setPen(QPen(QColor("#F2F4C6"), 2));
-            painter.setBrush(Qt::NoBrush);
-            painter.drawRoundedRect(bounds.adjusted(4, 4, -4, -4),
-                                    (bounds.height() - 8) / 2.0,
-                                    (bounds.height() - 8) / 2.0);
+        if (AppStyle::keyboardFocusVisible(this)) {
+            painter.setPen(QPen(QColor("#F2F4C6"), 3, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(QPointF(bounds.center().x() - 18, bounds.bottom() - 7),
+                             QPointF(bounds.center().x() + 18, bounds.bottom() - 7));
         }
 
         painter.setFont(font());
@@ -188,9 +187,11 @@ MainWindow::MainWindow(FocusController& controller,
         const FocusRecord& focus = record.value();
         const QString plantName = PlantCatalog::isKnown(focus.plantType)
             ? PlantCatalog::byType(focus.plantType).displayName : QStringLiteral("未知植物");
-        const int tagIndex = settingsTagCombo_ ? settingsTagCombo_->findData(focus.tagId) : -1;
-        const QString tagName = tagIndex >= 0 ? settingsTagCombo_->itemText(tagIndex)
-                                               : QStringLiteral("无标签");
+        QString tagName = QStringLiteral("无标签");
+        if (focus.tagId != 0 && m_tagMgr) {
+            const auto tag = m_tagMgr->tag(focus.tagId);
+            if (!tag.name.trimmed().isEmpty()) tagName = tag.name.trimmed();
+        }
         const QString state = focus.status == FocusRecordStatus::Success
             ? QStringLiteral("成功完成") : QStringLiteral("主动放弃");
         const QString started = QDateTime::fromSecsSinceEpoch(
@@ -236,10 +237,10 @@ MainWindow::MainWindow(FocusController& controller,
 
         auto* tagFilter = new QComboBox(&dialog);
         tagFilter->addItem(QStringLiteral("全部项目"), QVariant::fromValue<qulonglong>(std::numeric_limits<uint32_t>::max()));
-        if (settingsTagCombo_) {
-            for (int index = 0; index < settingsTagCombo_->count(); ++index) {
-                tagFilter->addItem(settingsTagCombo_->itemText(index), settingsTagCombo_->itemData(index));
-            }
+        tagFilter->addItem(QStringLiteral("无标签"), 0);
+        if (m_tagMgr) {
+            for (const auto& tag : m_tagMgr->all())
+                tagFilter->addItem(tag.name, tag.id);
         }
         const int tagIndex = current.tagId == std::numeric_limits<uint32_t>::max()
             ? 0 : tagFilter->findData(current.tagId);
@@ -298,10 +299,13 @@ MainWindow::MainWindow(FocusController& controller,
         dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
         dialog.setWindowTitle(QStringLiteral("总览筛选"));
         DialogPresenter::prepare(dialog);
+        dialog.setAttribute(Qt::WA_TranslucentBackground, true);
         dialog.setObjectName("forestOverviewDialog");
         dialog.setFixedWidth(640);
         dialog.setStyleSheet(
             "QDialog#forestOverviewDialog {"
+            " background:transparent; border:none; }"
+            "QFrame#forestOverviewSurface {"
             " background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #E8F6C9,stop:1 #BCE9C5);"
             " border:2px solid #3F9670; border-radius:24px; }"
             "QLabel#forestOverviewLeaf { background:#F4D96E; border:2px solid #D4AD42; border-radius:22px;"
@@ -319,7 +323,13 @@ MainWindow::MainWindow(FocusController& controller,
             " border-radius:16px; color:#526A5D; font-size:26px; font-weight:500; }"
             "QPushButton#forestOverviewAddTag:hover { background:#FFFFFF; border-color:#3E9A6F; color:#245543; }");
 
-        auto* layout = new QVBoxLayout(&dialog);
+        auto* windowLayout = new QVBoxLayout(&dialog);
+        windowLayout->setContentsMargins(0, 0, 0, 0);
+        windowLayout->setSpacing(0);
+        auto* surface = new QFrame(&dialog);
+        surface->setObjectName("forestOverviewSurface");
+        windowLayout->addWidget(surface);
+        auto* layout = new QVBoxLayout(surface);
         layout->setContentsMargins(28, 26, 28, 24);
         layout->setSpacing(16);
         auto* titleRow = new QHBoxLayout;
@@ -528,8 +538,8 @@ MainWindow::MainWindow(FocusController& controller,
     page0->setObjectName("focusPage");
     page0->setStyleSheet(
         "QWidget#focusPage {"
-        " background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-        " stop:0 #3E967A, stop:0.48 #58B195, stop:1 #75C7B3);"
+        " background: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+        " stop:0 #4EA488, stop:1 #68BBA2);"
         "}");
     auto* p0Layout = new QVBoxLayout(page0);
     p0Layout->setContentsMargins(28, 72, 28, 22);
@@ -542,7 +552,7 @@ MainWindow::MainWindow(FocusController& controller,
     focusContent->setStyleSheet("QWidget#focusContent { background:transparent; border:none; }");
     auto* focusPageLayout = new QVBoxLayout(focusContent);
     focusPageLayout->setContentsMargins(0, 0, 0, 0);
-    focusPageLayout->setSpacing(14);
+    focusPageLayout->setSpacing(10);
     p0Layout->addWidget(focusContent, 1, Qt::AlignHCenter);
 
     auto* statusLayout = new QHBoxLayout;
@@ -552,9 +562,9 @@ MainWindow::MainWindow(FocusController& controller,
     auto* modeSwitch = new QWidget(page0);
     modeSwitch->setObjectName("focusModeSwitch");
     modeSwitch->setStyleSheet(
-        "QWidget#focusModeSwitch { background:rgba(255,255,255,24);"
-        " border:1px solid rgba(255,255,255,48); border-radius:22px; }"
-        "QLabel[modeTitle=\"true\"] { color:rgba(247,255,247,125); font-size:19px;"
+        "QWidget#focusModeSwitch { background:rgba(255,255,255,16);"
+        " border:1px solid rgba(255,255,255,36); border-radius:20px; }"
+        "QLabel[modeTitle=\"true\"] { color:rgba(247,255,247,120); font-size:16px;"
         " font-weight:900; background:transparent; border:none; padding:0 12px; }"
         "QLabel[modeTitle=\"true\"][active=\"true\"] { color:#F7FFF7; }");
     auto* modeSwitchLayout = new QHBoxLayout(modeSwitch);
@@ -576,9 +586,9 @@ MainWindow::MainWindow(FocusController& controller,
     modePill->setStyleSheet(
         "QWidget#topModePill { background:transparent; border:none; }"
         "QPushButton[mode=\"true\"] { background:transparent; border:none;"
-        " border-radius:20px; color:rgba(247,255,247,135); font-size:25px;"
+        " border-radius:16px; color:rgba(247,255,247,135); font-size:22px;"
         " font-weight:900; padding:0; }"
-        "QPushButton[mode=\"true\"]:hover { background-color:rgba(255,255,255,22); color:#FFFFFF; }"
+        "QPushButton[mode=\"true\"]:hover { background-color:rgba(255,255,255,18); color:#FFFFFF; }"
         "QPushButton[mode=\"true\"][active=\"true\"] { background:transparent;"
         " border:none; color:#F7FFF7; }");
     modePill->setFixedHeight(42);
@@ -587,6 +597,10 @@ MainWindow::MainWindow(FocusController& controller,
     topModeLayout->setSpacing(0);
     homeCountdownBtn_ = new QPushButton(QString::fromUtf8(u8"⌛"), modePill);
     homeStopwatchBtn_ = new QPushButton(QString::fromUtf8(u8"⏱"), modePill);
+    homeCountdownBtn_->setObjectName("homeCountdownModeButton");
+    homeStopwatchBtn_->setObjectName("homeStopwatchModeButton");
+    homeCountdownBtn_->setAccessibleName(QStringLiteral("倒计时模式设置"));
+    homeStopwatchBtn_->setAccessibleName(QStringLiteral("正计时模式设置"));
     homeCountdownBtn_->setProperty("mode", "true");
     homeStopwatchBtn_->setProperty("mode", "true");
     const QString modeButtonStyle = QStringLiteral(
@@ -609,7 +623,7 @@ MainWindow::MainWindow(FocusController& controller,
     coinLabel_ = new QLabel(page0);
     coinLabel_->setAlignment(Qt::AlignCenter);
     coinLabel_->setStyleSheet(
-        "background-color:rgba(28,96,72,94); border:1px solid rgba(255,255,255,42);"
+        "background-color:rgba(255,255,255,18); border:1px solid rgba(255,255,255,36);"
         "border-radius:16px; padding:8px 16px; color:#F7FFF7; font-weight:800;");
     coinLabel_->setText(QStringLiteral("🪙 %1").arg(coinManager_.balance()));
     coinLabel_->setMinimumWidth(86);
@@ -627,9 +641,8 @@ MainWindow::MainWindow(FocusController& controller,
     auto* focusHint = new QLabel(QString::fromUtf8(u8"开始种树吧!"), page0);
     focusHint->setAlignment(Qt::AlignCenter);
     focusHint->setStyleSheet(
-        "font-size:15px; font-weight:800; color:#F8FFE9;"
-        "padding:9px 20px; background:rgba(255,255,255,24);"
-        "border:1px solid rgba(255,255,255,46); border-radius:15px;");
+        "font-size:14px; font-weight:700; color:rgba(248,255,233,190);"
+        "padding:5px 16px; background:transparent; border:none;");
     auto* focusHintLayout = new QHBoxLayout;
     focusHintLayout->setContentsMargins(0, 0, 0, 0);
     focusHintLayout->addStretch();
@@ -644,6 +657,7 @@ MainWindow::MainWindow(FocusController& controller,
     homeModeOverlay_->setStyleSheet(
         "QWidget#homeModeOverlay { background-color:rgba(0,0,0,96); border:none; }");
     homeModeOverlay_->hide();
+    homeModeOverlay_->setFocusPolicy(Qt::StrongFocus);
     homeModeOverlay_->installEventFilter(this);
     auto* overlayLayout = new QVBoxLayout(homeModeOverlay_);
     overlayLayout->setContentsMargins(16, 86, 16, 16);
@@ -756,6 +770,7 @@ MainWindow::MainWindow(FocusController& controller,
     homeAutoExtendCheck_->setChecked(false);
     homeGroupPlantCheck_->setChecked(false);
     homeGroupPlantCheck_->setEnabled(false);
+    homeDeepFocusCheck_->setObjectName("homeDeepFocusOption");
     homeGroupPlantCheck_->setToolTip(QStringLiteral("多人一起种功能暂未接入当前专注流程"));
     optionList->addWidget(deepFocusRow);
     optionList->addWidget(groupPlantRow);
@@ -818,6 +833,10 @@ MainWindow::MainWindow(FocusController& controller,
             resumeFromPauseBreak();
         }
     });
+    auto* closeModeShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), homeModeOverlay_);
+    closeModeShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    QObject::connect(closeModeShortcut, &QShortcut::activated,
+                     this, &MainWindow::hideHomeModeOptions);
 
     auto* btnLayout = new QHBoxLayout;
     startBtn_   = new FocusStartButton;
@@ -893,177 +912,45 @@ MainWindow::MainWindow(FocusController& controller,
     stackedWidget_->addWidget(shopPage_->page());
 
     // ========== Page 3: 系统设置 ==========
-    auto* page5 = new QWidget;
-    page5->setObjectName("settingsPage");
-    page5->setStyleSheet(
-        "QWidget#settingsPage {"
-        " background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-        " stop:0 #58AD8F, stop:0.65 #4FA286, stop:1 #4A907B);"
-        "}");
-    auto* p5Layout = new QVBoxLayout(page5);
-    p5Layout->setContentsMargins(20, 20, 20, 20);
-    p5Layout->setSpacing(8);
-
-    auto* setTitle = new QLabel(QStringLiteral("系统设置"), page5);
-    setTitle->setStyleSheet("font-size:18px; font-weight:bold; color:#F7FFF7; background:transparent; border:none;");
-    setTitle->setAlignment(Qt::AlignCenter);
-    p5Layout->addWidget(setTitle);
-
-    auto* settingsBody = new QWidget(page5);
-    settingsBody->setObjectName("settingsBody");
-    auto* settingsBodyLayout = new QHBoxLayout(settingsBody);
-    settingsBodyLayout->setContentsMargins(0, 0, 0, 0);
-    settingsBodyLayout->setSpacing(16);
-
-    auto* settingsNav = new QListWidget(settingsBody);
-    settingsNav->setObjectName("settingsCategoryNav");
-    settingsNav->setFixedWidth(172);
-    settingsNav->addItem(QStringLiteral("专注设置"));
-    settingsNav->addItem(QStringLiteral("监督规则"));
-    settingsNav->addItem(QStringLiteral("外观与无障碍"));
-    settingsNav->addItem(QStringLiteral("数据与备份"));
-    settingsNav->setCurrentRow(0);
-
-    auto* settingsStack = new QStackedWidget(settingsBody);
-    settingsStack->setObjectName("settingsCategoryStack");
-    const auto createSettingsSection = [settingsStack](const QString& objectName) {
-        auto* scroll = new QScrollArea(settingsStack);
-        scroll->setWidgetResizable(true);
-        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        scroll->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
-        auto* content = new QWidget(scroll);
-        content->setObjectName(objectName);
-        content->setMaximumWidth(1120);
-        auto* layout = new QVBoxLayout(content);
-        layout->setContentsMargins(8, 4, 8, 12);
-        layout->setSpacing(12);
-        scroll->setWidget(content);
-        settingsStack->addWidget(scroll);
-        return layout;
-    };
-    auto* focusSettingsLayout = createSettingsSection(QStringLiteral("focusSettingsContent"));
-    auto* rulesSettingsLayout = createSettingsSection(QStringLiteral("rulesSettingsContent"));
-    auto* appearanceSettingsLayout = createSettingsSection(QStringLiteral("appearanceSettingsContent"));
-    auto* dataSettingsLayout = createSettingsSection(QStringLiteral("dataSettingsContent"));
-    const auto addSectionIntro = [](QVBoxLayout* layout, const QString& title, const QString& description) {
-        auto* card = new QWidget;
-        card->setProperty("uiCard", true);
-        auto* cardLayout = new QVBoxLayout(card);
-        cardLayout->setContentsMargins(18, 14, 18, 14);
-        cardLayout->setSpacing(4);
-        auto* titleLabel = new QLabel(title, card);
-        titleLabel->setProperty("settingTitle", true);
-        auto* descriptionLabel = new QLabel(description, card);
-        descriptionLabel->setProperty("settingDescription", true);
-        descriptionLabel->setWordWrap(true);
-        cardLayout->addWidget(titleLabel);
-        cardLayout->addWidget(descriptionLabel);
-        layout->addWidget(card);
-    };
-    addSectionIntro(focusSettingsLayout, QStringLiteral("专注设置"),
-                    QStringLiteral("设置下一次专注的植物、标签、时长与计时行为。"));
-    addSectionIntro(rulesSettingsLayout, QStringLiteral("监督规则"),
-                    QStringLiteral("管理深度专注期间需要避免的应用程序。"));
-    addSectionIntro(appearanceSettingsLayout, QStringLiteral("外观与无障碍"),
-                    QStringLiteral("调整文字大小、动态反馈和键盘操作的可辨识度。"));
-    addSectionIntro(dataSettingsLayout, QStringLiteral("数据与备份"),
-                    QStringLiteral("查看本地数据状态，并创建备份、恢复或导出专注记录。"));
-    auto* s3Layout = focusSettingsLayout;
-    QObject::connect(settingsNav, &QListWidget::currentRowChanged, settingsStack,
-                     &QStackedWidget::setCurrentIndex);
-    settingsBodyLayout->addWidget(settingsNav);
-    settingsBodyLayout->addWidget(settingsStack, 1);
-    p5Layout->addWidget(settingsBody, 1);
-
-    auto* plantGroup = new QGroupBox(QStringLiteral("植物选择"));
-    auto* plantLayout = new QHBoxLayout(plantGroup);
-    settingsPlantCombo_ = new QComboBox;
-    settingsPlantCombo_->setObjectName("focusPlantSelector");
+    settingsPage_ = new SettingsPage;
+    stackedWidget_->addWidget(settingsPage_);
     refreshPlantCombo();
-    plantLayout->addWidget(new QLabel(QStringLiteral("选择植物:")));
-    plantLayout->addWidget(settingsPlantCombo_);
-    s3Layout->addWidget(plantGroup);
+    refreshTagOptions();
+    settingsPage_->setBlacklist(ruleEngine_.blacklist());
+    settingsPage_->setDataSummary(
+        PathConfig::isPortableMode() ? QStringLiteral("便携模式") : QStringLiteral("安装模式"),
+        DatabaseManager::schemaVersion());
+    settingsPage_->setGuardianGoalMinutes(m_guardian ? m_guardian->dailyGoalMinutes() : 30);
 
-    auto* modeGroup = new QGroupBox(QStringLiteral("计时模式"));
-    auto* modeLayout = new QHBoxLayout(modeGroup);
-    settingsModeCombo_ = new QComboBox;
-    settingsModeCombo_->setObjectName("focusModeSelector");
-    settingsModeCombo_->addItem(QStringLiteral("倒计时 (番茄钟)"), 0);
-    settingsModeCombo_->addItem(QStringLiteral("正计时 (自由专注)"), 1);
-    modeLayout->addWidget(new QLabel(QStringLiteral("模式:")));
-    modeLayout->addWidget(settingsModeCombo_);
-    s3Layout->addWidget(modeGroup);
+    SettingsPage::FocusSettings initialFocus;
+    initialFocus.allowPause = UserPreferences::instance().allowPause();
+    settingsPage_->setFocusSettings(initialFocus);
 
-    auto* focusGroup = new QGroupBox(QStringLiteral("深度专注"));
-    auto* focusLayout = new QHBoxLayout(focusGroup);
-    settingsDeepFocusCheck_ = new QCheckBox(QStringLiteral("开启后，离开允许窗口会触发倒计时警告"));
-    settingsDeepFocusCheck_->setChecked(true);
-    settingsDeepFocusCheck_->setCursor(Qt::PointingHandCursor);
-    focusLayout->addWidget(settingsDeepFocusCheck_);
-    s3Layout->addWidget(focusGroup);
-
-    auto* timeGroup = new QGroupBox(QStringLiteral("专注时长"));
-    auto* timeLayout = new QHBoxLayout(timeGroup);
-    settingsMinutesSpin_ = new QSpinBox;
-    settingsMinutesSpin_->setRange(10, 120);
-    settingsMinutesSpin_->setValue(25);
-    settingsMinutesSpin_->setSuffix(QStringLiteral(" 分钟"));
-    timeLayout->addWidget(new QLabel(QStringLiteral("时长:")));
-    timeLayout->addWidget(settingsMinutesSpin_);
-    s3Layout->addWidget(timeGroup);
-
-    auto* pauseGroup = new QGroupBox(QStringLiteral("计时中暂停"));
-    auto* pauseSettingLayout = new QHBoxLayout(pauseGroup);
-    settingsAllowPauseCheck_ = new QCheckBox(QStringLiteral("允许计时中暂停"));
-    settingsAllowPauseCheck_->setChecked(UserPreferences::instance().allowPause());
-    settingsAllowPauseCheck_->setCursor(Qt::PointingHandCursor);
-    pauseSettingLayout->addWidget(settingsAllowPauseCheck_);
-    s3Layout->addWidget(pauseGroup);
-
-    QObject::connect(settingsModeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int idx) {
-            settingsMinutesSpin_->setEnabled(idx == 0);
-            refreshHomeModeControls();
-        });
-    QObject::connect(settingsAllowPauseCheck_, &QCheckBox::toggled,
-        this, [](bool checked) {
-            UserPreferences::instance().setAllowPause(checked);
-        });
+    QObject::connect(settingsPage_, &SettingsPage::focusSettingsChanged, this, [this]() {
+        const auto focus = settingsPage_->focusSettings();
+        timerRing_->setPlantType(focus.plantType);
+        if (!focus.stopwatch) timerRing_->setSelectedMinutes(static_cast<uint32_t>(focus.minutes));
+        if (homeDeepFocusCheck_ && homeDeepFocusCheck_->isChecked() != focus.deepFocus) {
+            const QSignalBlocker blocker(homeDeepFocusCheck_);
+            homeDeepFocusCheck_->setChecked(focus.deepFocus);
+        }
+        UserPreferences::instance().setAllowPause(focus.allowPause);
+        refreshHomeModeControls();
+        refreshHomeTagBadge();
+    });
 
     const auto accessibility = UserPreferences::instance().accessibilityOptions();
-    auto* accessibilityGroup = new QGroupBox(QStringLiteral("无障碍与安静体验"));
-    auto* accessibilityLayout = new QFormLayout(accessibilityGroup);
-    auto* fontScale = new QComboBox(accessibilityGroup);
-    fontScale->setObjectName("accessibilityFontScale");
-    fontScale->addItem(QStringLiteral("较小"), 90);
-    fontScale->addItem(QStringLiteral("默认"), 100);
-    fontScale->addItem(QStringLiteral("较大"), 110);
-    fontScale->addItem(QStringLiteral("最大"), 125);
-    const int scaleIndex = fontScale->findData(accessibility.fontScalePercent);
-    fontScale->setCurrentIndex(scaleIndex >= 0 ? scaleIndex : 1);
-    auto* reduceMotion = new QCheckBox(QStringLiteral("减少动态内容更新"), accessibilityGroup);
-    reduceMotion->setChecked(accessibility.reducedMotion);
-    auto* highContrast = new QCheckBox(QStringLiteral("增强控件边界与键盘焦点"), accessibilityGroup);
-    highContrast->setChecked(accessibility.highContrast);
-    accessibilityLayout->addRow(QStringLiteral("文字大小:"), fontScale);
-    accessibilityLayout->addRow(reduceMotion);
-    accessibilityLayout->addRow(highContrast);
-    appearanceSettingsLayout->addWidget(accessibilityGroup);
-    const auto saveAccessibility = [this, fontScale, reduceMotion, highContrast]() {
+    settingsPage_->setAccessibilitySettings(
+        {accessibility.fontScalePercent, accessibility.reducedMotion, accessibility.highContrast});
+    QObject::connect(settingsPage_, &SettingsPage::accessibilitySettingsChanged, this, [this]() {
+        const auto current = settingsPage_->accessibilitySettings();
         UserPreferences::AccessibilityOptions options;
-        options.fontScalePercent = fontScale->currentData().toInt();
-        options.reducedMotion = reduceMotion->isChecked();
-        options.highContrast = highContrast->isChecked();
-        if (UserPreferences::instance().setAccessibilityOptions(options)) {
+        options.fontScalePercent = current.fontScalePercent;
+        options.reducedMotion = current.reducedMotion;
+        options.highContrast = current.highContrast;
+        if (UserPreferences::instance().setAccessibilityOptions(options))
             applyAccessibilityPreferences();
-        }
-    };
-    QObject::connect(fontScale, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-                     [saveAccessibility](int) { saveAccessibility(); });
-    QObject::connect(reduceMotion, &QCheckBox::toggled, this,
-                     [saveAccessibility](bool) { saveAccessibility(); });
-    QObject::connect(highContrast, &QCheckBox::toggled, this,
-                     [saveAccessibility](bool) { saveAccessibility(); });
+    });
 
     QObject::connect(homeCountdownBtn_, &QPushButton::clicked, this, [this]() {
         showHomeModeOptions(false);
@@ -1072,69 +959,37 @@ MainWindow::MainWindow(FocusController& controller,
         showHomeModeOptions(true);
     });
     QObject::connect(homeDeepFocusCheck_, &QCheckBox::toggled, this, [this](bool checked) {
-        if (settingsDeepFocusCheck_) settingsDeepFocusCheck_->setChecked(checked);
+        if (!settingsPage_) return;
+        auto focus = settingsPage_->focusSettings();
+        focus.deepFocus = checked;
+        settingsPage_->setFocusSettings(focus);
     });
-    QObject::connect(settingsDeepFocusCheck_, &QCheckBox::toggled,
-        this, [this](bool checked) {
-            if (homeDeepFocusCheck_) homeDeepFocusCheck_->setChecked(checked);
-        });
+    QObject::connect(timerRing_, &PlantTimerWidget::sig_timeSelected, this, [this](uint32_t minutes) {
+        if (!settingsPage_) return;
+        auto focus = settingsPage_->focusSettings();
+        focus.minutes = static_cast<int>(minutes);
+        settingsPage_->setFocusSettings(focus);
+    });
 
-    QObject::connect(settingsPlantCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int) {
-            timerRing_->setPlantType(settingsPlantCombo_->currentData().toUInt());
-        });
-
-    auto* tagGroup = new QGroupBox(QStringLiteral("标签"));
-    auto* tagLayout = new QHBoxLayout(tagGroup);
-    settingsTagCombo_ = new QComboBox;
-    settingsTagCombo_->setObjectName("focusTagSelector");
-    settingsTagCombo_->addItem(QStringLiteral("无标签"), 0);
-    if (m_tagMgr) {
-        for (const auto& t : m_tagMgr->all())
-            settingsTagCombo_->addItem(t.name, t.id);
-    }
-    QObject::connect(settingsTagCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int) {
-            refreshHomeTagBadge();
-        });
-    tagLayout->addWidget(new QLabel(QStringLiteral("标签:")));
-    tagLayout->addWidget(settingsTagCombo_, 1);
-    s3Layout->addWidget(tagGroup);
     refreshHomeTagBadge();
+    QObject::connect(settingsPage_, &SettingsPage::guardianGoalChanged, this, [this](int minutes) {
+        if (!m_guardian) return;
+        m_guardian->setDailyGoalMinutes(static_cast<uint32_t>(minutes));
+        m_guardian->save();
+        refreshGuardianPage();
+    });
+    QObject::connect(settingsPage_, &SettingsPage::blacklistAddRequested, this,
+                     [this](const QString& processName) {
+        ruleEngine_.addToBlacklist(processName);
+        settingsPage_->setBlacklist(ruleEngine_.blacklist());
+    });
+    QObject::connect(settingsPage_, &SettingsPage::blacklistRemoveRequested, this,
+                     [this](const QString& processName) {
+        ruleEngine_.removeFromBlacklist(processName);
+        settingsPage_->setBlacklist(ruleEngine_.blacklist());
+    });
 
-    auto* guardianGroup = new QGroupBox(QStringLiteral("时间守护"));
-    auto* guardianGLayout = new QHBoxLayout(guardianGroup);
-    auto* guardianGoalSpin = new QSpinBox;
-    guardianGoalSpin->setRange(10, 600);
-    guardianGoalSpin->setValue(m_guardian ? m_guardian->dailyGoalMinutes() : 30);
-    guardianGoalSpin->setSuffix(QStringLiteral(" 分钟/天"));
-    QObject::connect(guardianGoalSpin, QOverload<int>::of(&QSpinBox::valueChanged),
-        this, [this](int v) {
-            if (m_guardian) { m_guardian->setDailyGoalMinutes(static_cast<uint32_t>(v)); m_guardian->save(); refreshGuardianPage(); }
-        });
-    guardianGLayout->addWidget(new QLabel(QStringLiteral("每日目标:")));
-    guardianGLayout->addWidget(guardianGoalSpin);
-    s3Layout->addWidget(guardianGroup);
-
-    auto* dataGroup = new QGroupBox(QStringLiteral("数据与备份"));
-    auto* dataLayout = new QVBoxLayout(dataGroup);
-    auto* dataInfo = new QLabel(QStringLiteral("数据模式：%1  |  专注数据：SQLite 架构 v%2")
-        .arg(PathConfig::isPortableMode() ? QStringLiteral("便携模式") : QStringLiteral("安装模式"))
-        .arg(DatabaseManager::schemaVersion()));
-    dataInfo->setWordWrap(true);
-    dataLayout->addWidget(dataInfo);
-    auto* dataButtons = new QHBoxLayout;
-    auto* backupBtn = new QPushButton(QStringLiteral("创建备份"));
-    auto* restoreBtn = new QPushButton(QStringLiteral("从备份恢复"));
-    auto* exportBtn = new QPushButton(QStringLiteral("导出专注记录"));
-    auto* openDataBtn = new QPushButton(QStringLiteral("打开数据目录"));
-    dataButtons->addWidget(backupBtn);
-    dataButtons->addWidget(restoreBtn);
-    dataButtons->addWidget(exportBtn);
-    dataButtons->addWidget(openDataBtn);
-    dataLayout->addLayout(dataButtons);
-    dataSettingsLayout->addWidget(dataGroup);
-    QObject::connect(backupBtn, &QPushButton::clicked, this, [this]() {
+    QObject::connect(settingsPage_, &SettingsPage::backupRequested, this, [this]() {
         const QString root = QFileDialog::getExistingDirectory(this, QStringLiteral("选择备份保存位置"));
         if (root.isEmpty()) return;
         QString backupDir, error;
@@ -1144,7 +999,7 @@ MainWindow::MainWindow(FocusController& controller,
             DialogPresenter::warning(this, QStringLiteral("备份失败"), error);
         }
     });
-    QObject::connect(restoreBtn, &QPushButton::clicked, this, [this]() {
+    QObject::connect(settingsPage_, &SettingsPage::restoreRequested, this, [this]() {
         const QString backupDir = QFileDialog::getExistingDirectory(this, QStringLiteral("选择 Forest 备份目录"));
         if (backupDir.isEmpty()) return;
         QString error;
@@ -1154,7 +1009,7 @@ MainWindow::MainWindow(FocusController& controller,
             DialogPresenter::warning(this, QStringLiteral("恢复请求失败"), error);
         }
     });
-    QObject::connect(exportBtn, &QPushButton::clicked, this, [this]() {
+    QObject::connect(settingsPage_, &SettingsPage::exportRequested, this, [this]() {
         const QString path = QFileDialog::getSaveFileName(this, QStringLiteral("导出专注记录"),
             QDir::home().filePath(QStringLiteral("Forest-focus-records.csv")), QStringLiteral("CSV 文件 (*.csv)"));
         if (path.isEmpty()) return;
@@ -1163,57 +1018,9 @@ MainWindow::MainWindow(FocusController& controller,
             DialogPresenter::warning(this, QStringLiteral("导出失败"), error);
         }
     });
-    QObject::connect(openDataBtn, &QPushButton::clicked, this, []() {
+    QObject::connect(settingsPage_, &SettingsPage::openDataDirectoryRequested, this, []() {
         QDesktopServices::openUrl(QUrl::fromLocalFile(PathConfig::getAppDataDir()));
     });
-
-    auto* oathGroup = new QGroupBox(QStringLiteral("树梢誓言"));
-    auto* oathLayout = new QHBoxLayout(oathGroup);
-    settingsOathInput_ = new QLineEdit;
-    settingsOathInput_->setPlaceholderText(QStringLiteral("写下一句专注心愿..."));
-    oathLayout->addWidget(settingsOathInput_);
-    s3Layout->addWidget(oathGroup);
-
-    auto* blGroup = new QGroupBox(QStringLiteral("进程黑名单"));
-    auto* blLayout = new QVBoxLayout(blGroup);
-    settingsBlacklistWidget_ = new QListWidget;
-    for (const QString& name : ruleEngine_.blacklist()) {
-        settingsBlacklistWidget_->addItem(name);
-    }
-    blLayout->addWidget(settingsBlacklistWidget_);
-    auto* inputLayout = new QHBoxLayout;
-    settingsBlacklistInput_ = new QLineEdit;
-    settingsBlacklistInput_->setPlaceholderText(QStringLiteral("输入进程名，如 chrome.exe"));
-    auto* addBtn = new QPushButton(QStringLiteral("添加"));
-    auto* removeBtn = new QPushButton(QStringLiteral("移除"));
-    addBtn->setCursor(Qt::PointingHandCursor);
-    removeBtn->setCursor(Qt::PointingHandCursor);
-    inputLayout->addWidget(settingsBlacklistInput_);
-    inputLayout->addWidget(addBtn);
-    inputLayout->addWidget(removeBtn);
-    blLayout->addLayout(inputLayout);
-    rulesSettingsLayout->addWidget(blGroup);
-
-    QObject::connect(addBtn, &QPushButton::clicked, this, [this]() {
-        QString name = settingsBlacklistInput_->text().trimmed();
-        if (name.isEmpty()) return;
-        ruleEngine_.addToBlacklist(name);
-        settingsBlacklistWidget_->addItem(name);
-        settingsBlacklistInput_->clear();
-    });
-    QObject::connect(removeBtn, &QPushButton::clicked, this, [this]() {
-        auto* item = settingsBlacklistWidget_->currentItem();
-        if (!item) return;
-        ruleEngine_.removeFromBlacklist(item->text());
-        delete settingsBlacklistWidget_->takeItem(settingsBlacklistWidget_->row(item));
-    });
-
-    focusSettingsLayout->addStretch();
-    rulesSettingsLayout->addStretch();
-    appearanceSettingsLayout->addStretch();
-    dataSettingsLayout->addStretch();
-
-    stackedWidget_->addWidget(page5);
 
     // ========== Page 4: 成就列表 ==========
     stackedWidget_->addWidget(achievementsPage_->page());
@@ -1507,23 +1314,14 @@ void MainWindow::switchPage(int index)
 
 void MainWindow::refreshPlantCombo()
 {
-    if (!settingsPlantCombo_) return;
-
-    uint32_t currentType = settingsPlantCombo_->currentData().toUInt();
-    settingsPlantCombo_->blockSignals(true);
-    settingsPlantCombo_->clear();
-
-    int newIndex = 0;
+    if (!settingsPage_) return;
+    const uint32_t currentType = settingsPage_->focusSettings().plantType;
+    QVector<SettingsPage::Option> options;
     for (const auto& plant : PlantCatalog::all()) {
-        if (coinManager_.isPlantUnlocked(plant.type)) {
-            settingsPlantCombo_->addItem(QStringLiteral("%1 (%2)").arg(plant.displayName, plant.internalName), plant.type);
-            if (plant.type == currentType) {
-                newIndex = settingsPlantCombo_->count() - 1;
-            }
-        }
+        if (coinManager_.isPlantUnlocked(plant.type))
+            options.push_back({plant.displayName, plant.type});
     }
-    settingsPlantCombo_->setCurrentIndex(newIndex);
-    settingsPlantCombo_->blockSignals(false);
+    settingsPage_->setPlantOptions(options, currentType);
 }
 
 void MainWindow::refreshShopPage()
@@ -1568,41 +1366,39 @@ void MainWindow::refreshChallengePage()
 
 void MainWindow::refreshTagOptions()
 {
-    if (!m_tagMgr) return;
-    const uint32_t currentId = settingsTagCombo_ ? settingsTagCombo_->currentData().toUInt() : 0;
-
-    if (settingsTagCombo_) {
-        settingsTagCombo_->blockSignals(true);
-        settingsTagCombo_->clear();
-        settingsTagCombo_->addItem(QStringLiteral("无标签"), 0);
-        int sel = 0;
-        for (const auto& t : m_tagMgr->all()) {
-            settingsTagCombo_->addItem(t.name, t.id);
-            if (t.id == currentId) sel = settingsTagCombo_->count() - 1;
-        }
-        settingsTagCombo_->setCurrentIndex(sel);
-        settingsTagCombo_->blockSignals(false);
-    }
+    if (!m_tagMgr || !settingsPage_) return;
+    const uint32_t currentId = settingsPage_->focusSettings().tagId;
+    QVector<SettingsPage::Option> options = {{QStringLiteral("无标签"), 0}};
+    for (const auto& tag : m_tagMgr->all())
+        options.push_back({tag.name, tag.id});
+    settingsPage_->setTagOptions(options, currentId);
     refreshHomeTagBadge();
 }
 
 void MainWindow::setSelectedTagId(uint32_t tagId)
 {
-    if (!settingsTagCombo_) return;
-    int index = settingsTagCombo_->findData(tagId);
-    if (index < 0) index = 0;
-    if (settingsTagCombo_->currentIndex() != index) {
-        settingsTagCombo_->setCurrentIndex(index);
-    } else {
-        refreshHomeTagBadge();
+    if (!settingsPage_) return;
+    if (tagId != 0 && m_tagMgr) {
+        bool found = false;
+        for (const auto& t : m_tagMgr->all()) {
+            if (t.id == tagId) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) tagId = 0;
     }
+    auto focus = settingsPage_->focusSettings();
+    focus.tagId = tagId;
+    settingsPage_->setFocusSettings(focus);
+    refreshHomeTagBadge();
 }
 
 void MainWindow::refreshHomeTagBadge()
 {
     if (!timerRing_) return;
 
-    uint32_t tagId = settingsTagCombo_ ? settingsTagCombo_->currentData().toUInt() : 0;
+    const uint32_t tagId = settingsPage_ ? settingsPage_->focusSettings().tagId : 0;
     QString tagName = QStringLiteral("无标签");
     QColor tagColor("#B8B6EA");
     if (tagId != 0 && m_tagMgr) {
@@ -1623,10 +1419,22 @@ void MainWindow::showHomePlantSelector()
     }
     refreshPlantCombo();
 
-    QDialog dialog(this);
-    dialog.setWindowTitle(QStringLiteral("选择植物"));
-    DialogPresenter::prepare(dialog);
-    dialog.setStyleSheet(
+    if (homePlantSelector_) {
+        homePlantSelector_->show();
+        homePlantSelector_->raise();
+        homePlantSelector_->activateWindow();
+        return;
+    }
+
+    auto* dialog = new QDialog(this, Qt::Popup | Qt::FramelessWindowHint);
+    homePlantSelector_ = dialog;
+    dialog->setObjectName(QStringLiteral("homePlantSelectorPopup"));
+    dialog->setWindowTitle(QStringLiteral("选择植物"));
+    dialog->setWindowModality(Qt::NonModal);
+    dialog->setModal(false);
+    dialog->setAttribute(Qt::WA_StyledBackground, true);
+    dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    dialog->setStyleSheet(
         "QDialog { background-color:#5BAE93; }"
         "QLabel#selectorTitle { color:#F7FFF7; font-size:18px; font-weight:900; }"
         "QPushButton[plantCard=\"true\"] { background-color:rgba(255,255,255,42);"
@@ -1635,10 +1443,10 @@ void MainWindow::showHomePlantSelector()
         "QPushButton[plantCard=\"true\"]:hover { background-color:rgba(242,244,198,72);"
         " border-color:#F2F4C6; }");
 
-    auto* layout = new QVBoxLayout(&dialog);
+    auto* layout = new QVBoxLayout(dialog);
     layout->setContentsMargins(18, 18, 18, 18);
     layout->setSpacing(14);
-    auto* title = new QLabel(QStringLiteral("选择本次专注植物"), &dialog);
+    auto* title = new QLabel(QStringLiteral("选择本次专注植物"), dialog);
     title->setObjectName("selectorTitle");
     title->setAlignment(Qt::AlignCenter);
     layout->addWidget(title);
@@ -1648,30 +1456,28 @@ void MainWindow::showHomePlantSelector()
     int unlockedCount = 0;
     for (const auto& plant : PlantCatalog::all()) {
         if (!coinManager_.isPlantUnlocked(plant.type)) continue;
-        auto* btn = new QPushButton(plant.displayName, &dialog);
+        auto* btn = new QPushButton(plant.displayName, dialog);
         btn->setProperty("plantCard", "true");
+        btn->setProperty("plantType", plant.type);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setIcon(QIcon(PlantImageUtils::loadPlantIcon(plant.iconPath)));
         btn->setIconSize(QSize(76, 76));
         btn->setMinimumSize(132, 116);
         grid->addWidget(btn, unlockedCount / 3, unlockedCount % 3);
-        QObject::connect(btn, &QPushButton::clicked, &dialog, [this, &dialog, type = plant.type]() {
-            if (settingsPlantCombo_) {
-                for (int i = 0; i < settingsPlantCombo_->count(); ++i) {
-                    if (settingsPlantCombo_->itemData(i).toUInt() == type) {
-                        settingsPlantCombo_->setCurrentIndex(i);
-                        break;
-                    }
-                }
+        QObject::connect(btn, &QPushButton::clicked, dialog, [this, dialog, type = plant.type]() {
+            if (settingsPage_) {
+                auto focus = settingsPage_->focusSettings();
+                focus.plantType = type;
+                settingsPage_->setFocusSettings(focus);
             }
             if (timerRing_) timerRing_->setPlantType(type);
-            dialog.accept();
+            dialog->close();
         });
         ++unlockedCount;
     }
 
     if (unlockedCount == 0) {
-        auto* empty = new QLabel(QStringLiteral("暂无已解锁植物"), &dialog);
+        auto* empty = new QLabel(QStringLiteral("暂无已解锁植物"), dialog);
         empty->setAlignment(Qt::AlignCenter);
         empty->setStyleSheet("color:#F7FFF7; font-weight:800;");
         layout->addWidget(empty);
@@ -1679,7 +1485,22 @@ void MainWindow::showHomePlantSelector()
         layout->addLayout(grid);
     }
 
-    dialog.exec();
+    dialog->adjustSize();
+    const QPoint anchor = timerRing_
+        ? timerRing_->mapToGlobal(timerRing_->rect().center())
+        : mapToGlobal(rect().center());
+    QScreen* screen = QApplication::screenAt(anchor);
+    const QRect available = screen ? screen->availableGeometry() : QRect(anchor - QPoint(640, 400),
+                                                                          QSize(1280, 800));
+    const QSize popupSize = dialog->size();
+    const int x = qBound(available.left() + 12, anchor.x() - popupSize.width() / 2,
+                         available.right() - popupSize.width() - 12);
+    const int y = qBound(available.top() + 12, anchor.y() - popupSize.height() / 2,
+                         available.bottom() - popupSize.height() - 12);
+    dialog->move(x, y);
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
 }
 
 void MainWindow::refreshGuardianPage()
@@ -1695,11 +1516,10 @@ void MainWindow::refreshGuardianPage()
 
 void MainWindow::setHomeTimerMode(bool stopwatch)
 {
-    if (!settingsModeCombo_) return;
-    int targetIndex = stopwatch ? 1 : 0;
-    if (settingsModeCombo_->currentIndex() != targetIndex) {
-        settingsModeCombo_->setCurrentIndex(targetIndex);
-    }
+    if (!settingsPage_) return;
+    auto focus = settingsPage_->focusSettings();
+    focus.stopwatch = stopwatch;
+    settingsPage_->setFocusSettings(focus);
     refreshHomeModeControls();
 }
 
@@ -1707,6 +1527,9 @@ void MainWindow::showHomeModeOptions(bool stopwatch)
 {
     setHomeTimerMode(stopwatch);
     if (!homeModeOverlay_) return;
+    homeModeReturnFocus_ = stopwatch
+        ? static_cast<QWidget*>(homeStopwatchBtn_)
+        : static_cast<QWidget*>(homeCountdownBtn_);
 
     QWidget* host = centralWidget();
     if (host) {
@@ -1714,12 +1537,21 @@ void MainWindow::showHomeModeOptions(bool stopwatch)
     }
     homeModeOverlay_->show();
     homeModeOverlay_->raise();
+    if (stackedWidget_) stackedWidget_->setEnabled(false);
+    if (sidebarWidget_) sidebarWidget_->setEnabled(false);
+    if (homeDeepFocusCheck_) homeDeepFocusCheck_->setFocus(Qt::OtherFocusReason);
 }
 
 void MainWindow::hideHomeModeOptions()
 {
     if (homeModeOverlay_) {
         homeModeOverlay_->hide();
+    }
+    if (stackedWidget_) stackedWidget_->setEnabled(true);
+    if (sidebarWidget_) sidebarWidget_->setEnabled(true);
+    if (homeModeReturnFocus_) {
+        homeModeReturnFocus_->setFocus(Qt::OtherFocusReason);
+        homeModeReturnFocus_ = nullptr;
     }
 }
 
@@ -1735,6 +1567,9 @@ void MainWindow::showPauseBreakOverlay()
     }
     pauseBreakOverlay_->show();
     pauseBreakOverlay_->raise();
+    if (stackedWidget_) stackedWidget_->setEnabled(false);
+    if (sidebarWidget_) sidebarWidget_->setEnabled(false);
+    if (pauseBreakContinueBtn_) pauseBreakContinueBtn_->setFocus(Qt::OtherFocusReason);
     pauseBreakTimer_.start(1000);
 }
 
@@ -1744,6 +1579,8 @@ void MainWindow::hidePauseBreakOverlay()
     if (pauseBreakOverlay_) {
         pauseBreakOverlay_->hide();
     }
+    if (stackedWidget_) stackedWidget_->setEnabled(true);
+    if (sidebarWidget_) sidebarWidget_->setEnabled(true);
 }
 
 void MainWindow::resumeFromPauseBreak()
@@ -1771,9 +1608,10 @@ void MainWindow::updatePauseBreakText()
 
 void MainWindow::refreshHomeModeControls()
 {
-    if (!settingsModeCombo_ || !homeCountdownBtn_ || !homeStopwatchBtn_) return;
+    if (!settingsPage_ || !homeCountdownBtn_ || !homeStopwatchBtn_) return;
 
-    bool stopwatch = settingsModeCombo_->currentData().toUInt() == 1;
+    const auto focus = settingsPage_->focusSettings();
+    const bool stopwatch = focus.stopwatch;
     homeCountdownBtn_->setProperty("active", stopwatch ? "false" : "true");
     homeStopwatchBtn_->setProperty("active", stopwatch ? "true" : "false");
     if (homeCountdownModeLabel_) homeCountdownModeLabel_->setProperty("active", stopwatch ? "false" : "true");
@@ -1799,24 +1637,11 @@ void MainWindow::refreshHomeModeControls()
         countdownOptionsWidget_->setVisible(true);
         int targetHeight = countdownOptionsWidget_->sizeHint().height();
 
-        auto* oldAnim = countdownOptionsWidget_->findChild<QPropertyAnimation*>("countdownOptionsHeightAnim");
-        if (oldAnim) {
-            oldAnim->stop();
-            oldAnim->deleteLater();
-        }
-
-        auto* anim = new QPropertyAnimation(countdownOptionsWidget_, "maximumHeight", countdownOptionsWidget_);
-        anim->setObjectName("countdownOptionsHeightAnim");
-        anim->setDuration(180);
-        anim->setStartValue(countdownOptionsWidget_->maximumHeight() == QWIDGETSIZE_MAX
-            ? countdownOptionsWidget_->height()
-            : countdownOptionsWidget_->maximumHeight());
-        anim->setEndValue(targetHeight);
-        anim->setEasingCurve(QEasingCurve::OutCubic);
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
+        countdownOptionsWidget_->setMaximumHeight(targetHeight);
     }
-    if (homeDeepFocusCheck_ && settingsDeepFocusCheck_) {
-        homeDeepFocusCheck_->setChecked(settingsDeepFocusCheck_->isChecked());
+    if (homeDeepFocusCheck_ && homeDeepFocusCheck_->isChecked() != focus.deepFocus) {
+        const QSignalBlocker blocker(homeDeepFocusCheck_);
+        homeDeepFocusCheck_->setChecked(focus.deepFocus);
     }
 
     auto state = controller_.currentState();
@@ -1830,18 +1655,17 @@ void MainWindow::refreshHomeModeControls()
 void MainWindow::restoreFocusSetup()
 {
     const auto setup = UserPreferences::instance().focusSetup();
-    if (settingsModeCombo_) settingsModeCombo_->setCurrentIndex(setup.stopwatch ? 1 : 0);
-    if (settingsPlantCombo_) {
-        const int index = settingsPlantCombo_->findData(setup.plantType);
-        if (index >= 0) settingsPlantCombo_->setCurrentIndex(index);
+    if (settingsPage_) {
+        auto focus = settingsPage_->focusSettings();
+        focus.minutes = static_cast<int>(setup.minutes);
+        focus.plantType = setup.plantType;
+        focus.tagId = setup.tagId;
+        focus.stopwatch = setup.stopwatch;
+        focus.deepFocus = setup.deepFocus;
+        focus.allowPause = UserPreferences::instance().allowPause();
+        settingsPage_->setFocusSettings(focus);
     }
-    if (settingsTagCombo_) {
-        const int index = settingsTagCombo_->findData(setup.tagId);
-        if (index >= 0) settingsTagCombo_->setCurrentIndex(index);
-    }
-    if (settingsMinutesSpin_) settingsMinutesSpin_->setValue(static_cast<int>(setup.minutes));
     if (timerRing_) timerRing_->setSelectedMinutes(setup.minutes);
-    if (settingsDeepFocusCheck_) settingsDeepFocusCheck_->setChecked(setup.deepFocus);
     if (homeDeepFocusCheck_) homeDeepFocusCheck_->setChecked(setup.deepFocus);
     if (homeAutoExtendCheck_) homeAutoExtendCheck_->setChecked(setup.autoExtend);
     refreshHomeModeControls();
@@ -1850,12 +1674,14 @@ void MainWindow::restoreFocusSetup()
 
 void MainWindow::persistFocusSetup()
 {
+    const auto focus = settingsPage_ ? settingsPage_->focusSettings()
+                                     : SettingsPage::FocusSettings{};
     UserPreferences::FocusSetup setup;
     setup.minutes = timerRing_ ? timerRing_->selectedMinutes() : 25;
-    setup.plantType = settingsPlantCombo_ ? settingsPlantCombo_->currentData().toUInt() : 0;
-    setup.tagId = settingsTagCombo_ ? settingsTagCombo_->currentData().toUInt() : 0;
-    setup.stopwatch = settingsModeCombo_ && settingsModeCombo_->currentData().toUInt() == 1;
-    setup.deepFocus = settingsDeepFocusCheck_ && settingsDeepFocusCheck_->isChecked();
+    setup.plantType = focus.plantType;
+    setup.tagId = focus.tagId;
+    setup.stopwatch = focus.stopwatch;
+    setup.deepFocus = focus.deepFocus;
     setup.autoExtend = homeAutoExtendCheck_ && homeAutoExtendCheck_->isChecked();
     UserPreferences::instance().setFocusSetup(setup);
 }
@@ -1902,20 +1728,21 @@ void MainWindow::onStartClicked()
 {
     hideHomeModeOptions();
 
-    bool isCountdown = settingsModeCombo_->currentData().toUInt() == 0;
+    const auto focus = settingsPage_->focusSettings();
+    const bool isCountdown = !focus.stopwatch;
     auto mode = !isCountdown
         ? FocusController::TimerMode::STOPWATCH : FocusController::TimerMode::COUNTDOWN;
-    auto fm = settingsDeepFocusCheck_ && settingsDeepFocusCheck_->isChecked()
+    auto fm = focus.deepFocus
         ? FocusController::FocusMode::STRICT_MODE : FocusController::FocusMode::GENTLE_MODE;
 
     uint32_t minutes = timerRing_->selectedMinutes();
     FocusSessionCoordinator::StartRequest request;
-    request.plantType = static_cast<uint32_t>(settingsPlantCombo_->currentData().toUInt());
+    request.plantType = focus.plantType;
     request.plannedMinutes = minutes;
     request.timerMode = mode;
     request.focusMode = fm;
-    request.tagId = static_cast<uint32_t>(settingsTagCombo_->currentData().toUInt());
-    request.allowPause = isCountdown && settingsAllowPauseCheck_ && settingsAllowPauseCheck_->isChecked();
+    request.tagId = focus.tagId;
+    request.allowPause = isCountdown && focus.allowPause;
     request.autoExtend = isCountdown && homeAutoExtendCheck_ && homeAutoExtendCheck_->isChecked();
     if (!focusSession_->start(request)) {
         DialogPresenter::warning(this, QStringLiteral("无法开始专注"),
@@ -1923,12 +1750,11 @@ void MainWindow::onStartClicked()
         return;
     }
     persistFocusSetup();
-    timerRing_->setPlantType(
-        static_cast<uint32_t>(settingsPlantCombo_->currentData().toUInt()));
+    timerRing_->setPlantType(focus.plantType);
     timerRing_->setDisplaySeconds(isCountdown ? minutes * 60 : 0, !isCountdown);
     monitor_.startMonitoring();
     quoteTimer_.start(10000);
-    timerRing_->setOath(settingsOathInput_->text());
+    timerRing_->setOath(focus.oath);
     switchPage(0);
     updateUI();
 }
@@ -1976,14 +1802,16 @@ void MainWindow::updateUI()
     if (homeDeepFocusCheck_) homeDeepFocusCheck_->setEnabled(state.idle);
     if (homeGroupPlantCheck_) homeGroupPlantCheck_->setEnabled(false);
     if (homeAutoExtendCheck_) homeAutoExtendCheck_->setEnabled(state.idle);
-    if (settingsAllowPauseCheck_) settingsAllowPauseCheck_->setEnabled(state.idle);
+    if (settingsPage_) settingsPage_->setAllowPauseControlEnabled(state.idle);
     if (sidebarWidget_) sidebarWidget_->setVisible(!state.active);
 
     if (state.idle) {
-        const bool stopwatch = settingsModeCombo_ && settingsModeCombo_->currentData().toUInt() == 1;
+        const auto focus = settingsPage_ ? settingsPage_->focusSettings()
+                                         : SettingsPage::FocusSettings{};
+        const bool stopwatch = focus.stopwatch;
         timerRing_->setDisplaySeconds(0, stopwatch);
         timerRing_->setOath(QString());
-        timerRing_->setPlantType(settingsPlantCombo_->currentData().toUInt());
+        timerRing_->setPlantType(focus.plantType);
         refreshHomeModeControls();
     }
 
@@ -2065,15 +1893,10 @@ void MainWindow::applyAccessibilityPreferences()
     font.setPointSizeF(baseSize * options.fontScalePercent / 100.0);
     QApplication::setFont(font);
 
-    QString contrastRules;
-    if (options.highContrast) {
-        contrastRules = QStringLiteral(
-            "QPushButton, QComboBox, QSpinBox, QLineEdit, QCheckBox::indicator {"
-            " border:2px solid #173F33; }"
-            "QPushButton:focus, QComboBox:focus, QSpinBox:focus, QLineEdit:focus, QCheckBox:focus {"
-            " outline:2px solid #F2C94C; outline-offset:2px; }");
-    }
-    qApp->setStyleSheet(AppStyle::styleSheet() + contrastRules);
+    qApp->setStyleSheet(AppStyle::styleSheet(options.fontScalePercent, options.highContrast));
+    if (sidebarNavigation_) sidebarNavigation_->setReducedMotion(options.reducedMotion);
+    if (guardianDashboard_) guardianDashboard_->setReducedMotion(options.reducedMotion);
+    if (settingsPage_) settingsPage_->setReducedMotion(options.reducedMotion);
 }
 
 void MainWindow::onTrayActivated(QSystemTrayIcon::ActivationReason reason)

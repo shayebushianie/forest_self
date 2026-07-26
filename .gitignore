@@ -13,6 +13,7 @@
 /artifacts/
 /release/
 /.worktrees/
+/.superpowers/
 
 # 本地生成的运行时数据文件
 *.dat

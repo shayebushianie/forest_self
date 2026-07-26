@@ -5,21 +5,24 @@
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QLabel>
+#include <QLinearGradient>
+#include <QPainter>
 
 LoginDialog::LoginDialog(UserManager& userManager, QWidget* parent)
     : QDialog(parent), userManager_(userManager)
 {
     DialogPresenter::prepare(*this);
+    setAttribute(Qt::WA_TranslucentBackground, true);
     setWindowTitle(QStringLiteral("forest — 用户登录"));
     setFixedSize(380, 318);
     setObjectName("LoginDialog");
     setStyleSheet(
-        "QDialog#LoginDialog { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-        " stop:0 #EAF7CB, stop:1 #BDE8C8); border:2px solid #3F9670; border-radius:24px; }"
+        "QDialog#LoginDialog { background:transparent; border:none; }"
         "QLabel#loginForestTitle { color:#245543; font-size:22px; font-weight:900; }"
         "QLineEdit { background:#FFFDEB; border:2px solid #8FC486; border-radius:12px;"
         " color:#245543; padding:5px 10px; font-size:14px; }"
-        "QLineEdit:focus { background:#FFFFFF; border-color:#3E9A6F; }");
+        "QLineEdit:focus { background:#FFFFFF; }"
+        "QLineEdit[keyboardFocusVisible=\"true\"] { background:#F3F8D8; color:#173F33; }");
 
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(34, 28, 34, 26);
@@ -68,6 +71,19 @@ LoginDialog::LoginDialog(UserManager& userManager, QWidget* parent)
     QObject::connect(loginBtn, &QPushButton::clicked, this, &LoginDialog::onLoginClicked);
     QObject::connect(registerBtn, &QPushButton::clicked, this, &LoginDialog::onRegisterClicked);
     QObject::connect(passwordEdit_, &QLineEdit::returnPressed, this, &LoginDialog::onLoginClicked);
+}
+
+void LoginDialog::paintEvent(QPaintEvent* event)
+{
+    QDialog::paintEvent(event);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    QLinearGradient background(rect().topLeft(), rect().bottomRight());
+    background.setColorAt(0.0, QColor("#EAF7CB"));
+    background.setColorAt(1.0, QColor("#BDE8C8"));
+    painter.setBrush(background);
+    painter.setPen(QPen(QColor("#3F9670"), 2));
+    painter.drawRoundedRect(QRectF(rect()).adjusted(1, 1, -1, -1), 24, 24);
 }
 
 void LoginDialog::onLoginClicked()

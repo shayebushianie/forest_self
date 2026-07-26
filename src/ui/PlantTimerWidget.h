@@ -1,16 +1,18 @@
 #ifndef PLANTTIMERWIDGET_H
 #define PLANTTIMERWIDGET_H
 
-#include <QWidget>
+#include <QAbstractSlider>
 #include <QColor>
 #include <QMap>
 #include <QPixmap>
 #include <QString>
 #include <cstdint>
 
+class PaintedActionButton;
+
 // Custom circular timer control. In setup mode the ring behaves like a minute
 // selector; during focus it becomes a read-only progress display.
-class PlantTimerWidget : public QWidget {
+class PlantTimerWidget : public QAbstractSlider {
     Q_OBJECT
 
 public:
@@ -38,6 +40,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 private:
     // Geometry helpers used by both painting and drag-to-select interaction.
@@ -47,6 +50,7 @@ private:
     QPointF knobCenter(double angleDeg) const;
     bool isOnKnob(const QPointF& p) const;
     bool selectorVisible() const;
+    void updateSemanticActionGeometry();
 
     // Load (and cache) the pixmap for a given plant type and stage.
     const QPixmap& plantPixmap(uint32_t plantType, uint32_t stage, bool withered);
@@ -71,6 +75,8 @@ private:
     double knobAngle_ = 0;
 
     QMap<QString, QPixmap> plantCache_;
+    PaintedActionButton* tagAction_ = nullptr;
+    PaintedActionButton* plantAction_ = nullptr;
 };
 
 #endif // PLANTTIMERWIDGET_H

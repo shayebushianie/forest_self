@@ -2,17 +2,20 @@
 #define GUARDIANDASHBOARDWIDGET_H
 
 #include <QRectF>
-#include <QTimer>
+#include <QPointer>
 #include <QWidget>
 #include <QPixmap>
 #include <cstdint>
 
 class QPainter;
 class QSpinBox;
+class QPropertyAnimation;
+class QHideEvent;
 
 // Animated desktop dashboard for the time guardian page.
 class GuardianDashboardWidget : public QWidget {
     Q_OBJECT
+    Q_PROPERTY(qreal shownProgress READ shownProgress WRITE setShownProgress)
 
 public:
     explicit GuardianDashboardWidget(QWidget* parent = nullptr);
@@ -22,6 +25,10 @@ public:
                      uint32_t currentStreak,
                      uint32_t longestStreak,
                      uint32_t totalMinutes);
+    void setReducedMotion(bool reducedMotion);
+
+    qreal shownProgress() const { return shownProgress_; }
+    void setShownProgress(qreal progress);
 
 signals:
     void dailyGoalChanged(int minutes);
@@ -29,6 +36,7 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
 
 private:
     struct LayoutRects {
@@ -60,13 +68,15 @@ private:
     uint32_t longestStreak_ = 0;
     uint32_t totalMinutes_ = 0;
 
-    qreal phase_ = 0.0;
     qreal shownProgress_ = 0.0;
     qreal targetProgress_ = 0.0;
     QPixmap plantIcon_;
-    QTimer animationTimer_;
+    mutable QPixmap scaledPlantIcon_;
+    mutable QSize scaledPlantSize_;
+    QPointer<QPropertyAnimation> progressAnimation_;
     QSpinBox* goalSpin_ = nullptr;
     bool syncingGoalSpin_ = false;
+    bool reducedMotion_ = false;
 };
 
 #endif // GUARDIANDASHBOARDWIDGET_H

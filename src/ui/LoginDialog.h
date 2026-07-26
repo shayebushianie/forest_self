@@ -15,6 +15,9 @@ public:
 
     uint32_t getLoggedInUserId() const { return loggedUserId_; }
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
 private slots:
     void onLoginClicked();
     void onRegisterClicked();
