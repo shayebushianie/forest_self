@@ -15,12 +15,13 @@ jobs:
         with:
           version: '6.5.3'
           arch: 'win64_mingw'
-          tools: 'tools_mingw,qt.tools.win64_mingw1120'
+          tools: 'tools_mingw90,qt.tools.win64_mingw900'
       - name: Configure
         shell: pwsh
         run: |
           $compiler = Join-Path $env:IQTA_TOOLS 'mingw1120_64/bin/g++.exe'
           if (-not (Test-Path -LiteralPath $compiler)) { throw 'Matching Qt MinGW compiler is missing.' }
+          if ((& $compiler -dumpfullversion) -ne '11.2.0') { throw 'Qt 6.5.3 requires the validated MinGW 11.2.0 toolchain.' }
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" "-DCMAKE_CXX_COMPILER=$compiler"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Build
