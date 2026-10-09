@@ -30,6 +30,7 @@ private:
     QTimer timer_;
     bool monitoring_ = false;
     bool wasViolating_ = false;
+    bool firstCheck_ = true;
 };
 
 #endif // SYSTEMMONITOR_H

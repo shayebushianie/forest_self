@@ -1,7 +1,8 @@
-#ifndef COMMERCE_PAGES_H
+﻿#ifndef COMMERCE_PAGES_H
 #define COMMERCE_PAGES_H
 
 #include <QObject>
+#include <cstdint>
 
 class QWidget;
 class QVBoxLayout;
@@ -23,10 +24,14 @@ signals:
     void achievementsChanged();
 
 private:
+    void showPlantDetails(uint32_t plantType);
+    void showPurchaseFeedback(const QString& title, const QString& message, bool success);
     CoinManager& coins_;
     FocusResultService& focusResults_;
     QWidget* page_ = nullptr;
     QVBoxLayout* itemsLayout_ = nullptr;
+    QLabel* balanceLabel_ = nullptr;
+    QLabel* collectionLabel_ = nullptr;
 };
 
 class AchievementsPageController final : public QObject {
@@ -40,6 +45,7 @@ private:
     AchievementEngine& achievements_;
     QWidget* page_ = nullptr;
     QVBoxLayout* itemsLayout_ = nullptr;
+    QLabel* summaryLabel_ = nullptr;
 };
 
 class GachaPageController final : public QObject {
@@ -63,6 +69,7 @@ private:
     QLabel* resultIcon_ = nullptr;
     QLabel* resultTitle_ = nullptr;
     QLabel* resultDescription_ = nullptr;
+    QLabel* collectionLabel_ = nullptr;
     QVBoxLayout* variantsLayout_ = nullptr;
 };
 

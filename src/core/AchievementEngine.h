@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QVector>
 #include <QString>
+#include <QSet>
 #include "storage/DatabaseManager.h"
 #include "core/CoinManager.h"
 
@@ -37,12 +38,8 @@ public:
         int unlockedPlantCount = 0;
         int forestPlacementCount = 0;
         int variantCount = 0;
-        bool plantedOak = false;
-        bool plantedPine = false;
-        bool plantedRose = false;
-        bool plantedGinkgo = false;
-        bool plantedSunflower = false;
-        bool plantedCactus = false;
+        int availableVariantCount = 0;
+        QSet<uint32_t> plantedPlantTypes;
     };
 
     AchievementEngine(DatabaseManager& db, CoinManager& coinMgr, QObject* parent = nullptr);

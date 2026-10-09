@@ -1,6 +1,7 @@
 ﻿#include "core/AchievementEngine.h"
 
 #include <algorithm>
+#include "config/PlantCatalog.h"
 #include <QSet>
 #include <QtGlobal>
 
@@ -25,7 +26,7 @@ void AchievementEngine::setupDefs() {
         { QStringLiteral("biodiversity"), QStringLiteral("物种多样性"),
           QStringLiteral("成功种植过橡树、松树和玫瑰三种植物！"), QStringLiteral("🦋"), QStringLiteral("silver"), 100, 4, false },
         { QStringLiteral("botanist"), QStringLiteral("植物学家"),
-          QStringLiteral("成功种植过全部六种植物！"), QStringLiteral("🌿"), QStringLiteral("gold"), 220, 5, false },
+          QStringLiteral("成功种植过全部商城植物！"), QStringLiteral("🌿"), QStringLiteral("gold"), 220, 5, false },
 
         // New achievement system merged into one engine.
         { QStringLiteral("first_oak"),       QStringLiteral("橡树培育家"),
@@ -66,7 +67,7 @@ void AchievementEngine::setupDefs() {
         { QStringLiteral("variety_collector"),   QStringLiteral("色彩收藏家"),
           QStringLiteral("获得 6 种异色树种"), QStringLiteral("🌈"), QStringLiteral("gold"), 260, 21, false },
         { QStringLiteral("master_collector"),    QStringLiteral("全色彩大师"),
-          QStringLiteral("集齐全部 12 种异色树种"), QStringLiteral("💎"), QStringLiteral("gold"), 420, 22, false },
+          QStringLiteral("集齐全部异色树种"), QStringLiteral("💎"), QStringLiteral("gold"), 420, 22, false },
     };
 }
 
@@ -141,16 +142,14 @@ QVector<int> AchievementEngine::checkAll(const Context& ctx) {
         unlockById(id, condition, newlyUnlocked);
     };
 
-    check(QStringLiteral("first_oak"), ctx.lastSessionSuccess && ctx.lastPlantType == QStringLiteral("OakTree"));
-    check(QStringLiteral("first_rose"), ctx.lastSessionSuccess && ctx.lastPlantType == QStringLiteral("Rose"));
-    check(QStringLiteral("first_sunflower"), ctx.lastSessionSuccess && ctx.lastPlantType == QStringLiteral("Sunflower"));
-    check(QStringLiteral("first_pine"), ctx.lastSessionSuccess && ctx.lastPlantType == QStringLiteral("PineTree"));
-    check(QStringLiteral("full_collection"), ctx.unlockedPlantCount >= 6);
-    if (ctx.lastSessionSuccess) {
-        check(QStringLiteral("first_focus"), ctx.totalSessions >= 1);
-        check(QStringLiteral("dedicated"), ctx.totalSessions >= 10);
-        check(QStringLiteral("master"), ctx.totalSessions >= 50);
-    }
+    check(QStringLiteral("first_oak"), ctx.lastSessionSuccess && ctx.lastPlantType == PlantCatalog::byType(PlantTypeId::Oak).internalName);
+    check(QStringLiteral("first_rose"), ctx.lastSessionSuccess && ctx.lastPlantType == PlantCatalog::byType(PlantTypeId::Rose).internalName);
+    check(QStringLiteral("first_sunflower"), ctx.lastSessionSuccess && ctx.lastPlantType == PlantCatalog::byType(PlantTypeId::Sunflower).internalName);
+    check(QStringLiteral("first_pine"), ctx.lastSessionSuccess && ctx.lastPlantType == PlantCatalog::byType(PlantTypeId::Pine).internalName);
+    check(QStringLiteral("full_collection"), !PlantCatalog::all().isEmpty() && ctx.unlockedPlantCount >= PlantCatalog::all().size());
+    check(QStringLiteral("first_focus"), ctx.totalSuccessCount >= 1);
+    check(QStringLiteral("dedicated"), ctx.totalSuccessCount >= 10);
+    check(QStringLiteral("master"), ctx.totalSuccessCount >= 50);
     check(QStringLiteral("marathon"), ctx.lastSessionSuccess && ctx.lastSessionDuration >= 7200);
     check(QStringLiteral("no_distractions"), ctx.lastSessionSuccess && ctx.lastSessionStrict && ctx.lastSessionViolations == 0);
     check(QStringLiteral("saver"), ctx.totalCoinsEarned >= 100);
@@ -159,16 +158,18 @@ QVector<int> AchievementEngine::checkAll(const Context& ctx) {
     check(QStringLiteral("architect"), ctx.forestPlacementCount >= 15);
     check(QStringLiteral("first_variant"), ctx.variantCount >= 1);
     check(QStringLiteral("variety_collector"), ctx.variantCount >= 6);
-    check(QStringLiteral("master_collector"), ctx.variantCount >= 12);
+    check(QStringLiteral("master_collector"), ctx.availableVariantCount > 0 && ctx.variantCount >= ctx.availableVariantCount);
 
     if (ctx.totalSuccessCount >= 1) {
         check(QStringLiteral("first_focus_old"), ctx.totalSuccessCount >= 1);
         check(QStringLiteral("deep_guardian"), ctx.totalSeconds >= 30000);
         check(QStringLiteral("coin_tycoon"), ctx.totalCoinsEarned >= 1000);
         check(QStringLiteral("resilient"), ctx.totalFailCount >= 5);
-        check(QStringLiteral("biodiversity"), ctx.plantedOak && ctx.plantedPine && ctx.plantedRose);
-        check(QStringLiteral("botanist"), ctx.plantedOak && ctx.plantedPine && ctx.plantedRose &&
-                  ctx.plantedGinkgo && ctx.plantedSunflower && ctx.plantedCactus);
+        check(QStringLiteral("biodiversity"), ctx.plantedPlantTypes.contains(PlantTypeId::Oak) &&
+              ctx.plantedPlantTypes.contains(PlantTypeId::Pine) && ctx.plantedPlantTypes.contains(PlantTypeId::Rose));
+        check(QStringLiteral("botanist"), !PlantCatalog::all().isEmpty() &&
+              std::all_of(PlantCatalog::all().cbegin(), PlantCatalog::all().cend(),
+                          [&ctx](const PlantDefinition& plant) { return ctx.plantedPlantTypes.contains(plant.type); }));
     }
 
     return newlyUnlocked;

@@ -18,6 +18,7 @@
 #include <memory>
 #include "core/FocusResultService.h"
 #include "core/FocusSessionCoordinator.h"
+#include "core/ChallengeRewardService.h"
 #include "ui/CommercePages.h"
 #include "ui/SocialPages.h"
 #include "ui/SidebarNavigation.h"
@@ -44,6 +45,7 @@ class ChallengeManager;
 class TagManager;
 class GuardianManager;
 class UserFeatureServices;
+class ChallengeRewardService;
 class QProgressBar;
 class QSpinBox;
 class QTabWidget;
@@ -132,7 +134,9 @@ private:
     AchievementEngine& achievements_;
     FocusResultService& focusResults_;
     DashboardSnapshotService& dashboardSnapshots_;
+    UserFeatureServices& featureServices_;
     std::unique_ptr<FocusSessionCoordinator> focusSession_;
+    std::unique_ptr<ChallengeRewardService> challengeRewards_;
     std::unique_ptr<ShopPageController> shopPage_;
     std::unique_ptr<AchievementsPageController> achievementsPage_;
     std::unique_ptr<GachaPageController> gachaPage_;
@@ -158,6 +162,7 @@ private:
     QWidget* warningOverlay_ = nullptr;
     QLabel* warningLabel_ = nullptr;
     QLabel* coinLabel_ = nullptr;
+    QLabel* focusHint_ = nullptr;
     QPushButton* sidebarCoinLabel_ = nullptr;
     QWidget* countdownOptionsWidget_ = nullptr;
     QWidget* homeModeOverlay_ = nullptr;
@@ -169,8 +174,6 @@ private:
     int pauseBreakRemainingSeconds_ = 0;
     QPushButton* homeCountdownBtn_ = nullptr;
     QPushButton* homeStopwatchBtn_ = nullptr;
-    QLabel* homeCountdownModeLabel_ = nullptr;
-    QLabel* homeStopwatchModeLabel_ = nullptr;
     QCheckBox* homeAllowPauseCheck_ = nullptr;
     QCheckBox* homeDeepFocusCheck_ = nullptr;
     QCheckBox* homeGroupPlantCheck_ = nullptr;
@@ -193,6 +196,9 @@ private:
 
 
     GuardianDashboardWidget* guardianDashboard_ = nullptr;
+    bool closingFocus_ = false;
+    QString forestReadError_;
+    QString challengeReadError_;
 };
 
 #endif // MAINWINDOW_H

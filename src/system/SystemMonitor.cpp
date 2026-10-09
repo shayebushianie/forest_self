@@ -19,6 +19,8 @@ void SystemMonitor::startMonitoring()
 {
     if (monitoring_) return;
     monitoring_ = true;
+    wasViolating_ = false;
+    firstCheck_ = true;
     timer_.start(500);
     std::cout << "[SystemMonitor] Monitoring started (500ms interval).\n";
 }
@@ -54,18 +56,20 @@ void SystemMonitor::checkForegroundWindow()
             ? fullPath : fullPath.substr(lastSlash + 1);
 
         QString qExeName = QString::fromStdWString(exeName);
-        if (ruleEngine_.isViolation(qExeName)) {
+        const bool violation = ruleEngine_.isViolation(qExeName);
+        const bool changed = firstCheck_ || violation != wasViolating_;
+        wasViolating_ = violation;
+        firstCheck_ = false;
+        if (violation) {
             // Emit once when entering a violating process, not on every poll.
-            if (!wasViolating_) {
+            if (changed) {
                 emit sig_violationDetected(qExeName);
             }
-            wasViolating_ = true;
         } else {
             // Strict mode uses this edge to cancel the warning countdown.
-            if (wasViolating_) {
+            if (changed) {
                 emit sig_safeWindowDetected();
             }
-            wasViolating_ = false;
         }
     }
 

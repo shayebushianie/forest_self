@@ -1,16 +1,34 @@
 ﻿#include "ui/AppStyle.h"
 
-#include <QAbstractButton>
+#include "config/UserPreferences.h"
 #include <QApplication>
-#include <QComboBox>
 #include <QEvent>
 #include <QGraphicsOpacityEffect>
-#include <QLineEdit>
 #include <QPropertyAnimation>
-#include <QSpinBox>
 #include <QWidget>
+#include <QRegularExpression>
+#include <QDialog>
+#include <QPainterPath>
+#include <QPointer>
 
 namespace {
+
+class ModalBackdrop final : public QObject {
+public:
+    ModalBackdrop(QDialog& dialog, QWidget& host) : QObject(&dialog), shade_(new QWidget(&host))
+    {
+        setObjectName(QStringLiteral("forestBackdropOwner"));
+        shade_->setObjectName(QStringLiteral("forestModalBackdrop"));
+        shade_->setAttribute(Qt::WA_StyledBackground);
+        shade_->setStyleSheet("QWidget#forestModalBackdrop { background:rgba(12,45,34,90); border:none; }");
+        shade_->setGeometry(host.rect());
+        shade_->show();
+        shade_->raise();
+    }
+    ~ModalBackdrop() override { delete shade_.data(); }
+private:
+    QPointer<QWidget> shade_;
+};
 
 class SmoothInteractionFilter : public QObject {
 public:
@@ -20,67 +38,94 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
         auto* widget = qobject_cast<QWidget*>(watched);
-        if (!widget || !widget->isEnabled() || !isInteractive(widget)) {
-            return QObject::eventFilter(watched, event);
-        }
-
-        switch (event->type()) {
-        case QEvent::Enter:
-        case QEvent::FocusIn:
-            animateOpacity(widget, 1.0, 120);
-            break;
-        case QEvent::MouseButtonPress:
-            animateOpacity(widget, 0.86, 70);
-            break;
-        case QEvent::MouseButtonRelease:
-            animateOpacity(widget, 1.0, 120);
-            break;
-        case QEvent::Leave:
-        case QEvent::FocusOut:
-            animateOpacity(widget, 0.94, 160);
-            break;
-        default:
-            break;
+        if (widget && event->type() == QEvent::Show) AppStyle::applyAccessibility(*widget);
+        auto* dialog = qobject_cast<QDialog*>(widget);
+        if (dialog && dialog->property("forest.roundedDialog").toBool()) {
+            if (event->type() == QEvent::Show || event->type() == QEvent::Resize) {
+                QPainterPath shape;
+                shape.addRoundedRect(QRectF(dialog->rect()), 16, 16);
+                dialog->setMask(QRegion(shape.toFillPolygon().toPolygon()));
+            }
+            if (event->type() == QEvent::Show && dialog->parentWidget()) {
+                QWidget* host = dialog->parentWidget()->window();
+                if (host && host->isFullScreen() && !host->findChild<QWidget*>("focusResultBackdrop") &&
+                    !dialog->findChild<QObject*>("forestBackdropOwner")) {
+                    new ModalBackdrop(*dialog, *host);
+                }
+            } else if (event->type() == QEvent::Hide) {
+                delete dialog->findChild<QObject*>("forestBackdropOwner");
+            }
         }
         return QObject::eventFilter(watched, event);
-    }
-
-private:
-    static bool isInteractive(QWidget* widget)
-    {
-        return qobject_cast<QAbstractButton*>(widget) ||
-               qobject_cast<QComboBox*>(widget) ||
-               qobject_cast<QSpinBox*>(widget) ||
-               qobject_cast<QLineEdit*>(widget);
-    }
-
-    static void animateOpacity(QWidget* widget, qreal target, int duration)
-    {
-        auto* effect = qobject_cast<QGraphicsOpacityEffect*>(widget->graphicsEffect());
-        if (!effect) {
-            if (widget->graphicsEffect()) return;
-            effect = new QGraphicsOpacityEffect(widget);
-            effect->setOpacity(0.94);
-            widget->setGraphicsEffect(effect);
-        }
-
-        auto* previous = effect->findChild<QPropertyAnimation*>("smoothOpacityAnimation");
-        if (previous) {
-            previous->stop();
-            previous->deleteLater();
-        }
-
-        auto* anim = new QPropertyAnimation(effect, "opacity", effect);
-        anim->setObjectName("smoothOpacityAnimation");
-        anim->setDuration(duration);
-        anim->setStartValue(effect->opacity());
-        anim->setEndValue(target);
-        anim->setEasingCurve(QEasingCurve::OutCubic);
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
     }
 };
 
 } // namespace
+
+QColor AppStyle::color(Color role)
+{
+    switch (role) {
+    case Color::Workspace: return QColor("#F5F7F8");
+    case Color::Surface: return QColor("#FFFFFF");
+    case Color::Text: return QColor("#203C35");
+    case Color::Muted: return QColor("#53665F");
+    case Color::Primary: return QColor("#246B57");
+    case Color::PrimaryHover: return QColor("#1D5948");
+    case Color::PrimaryPressed: return QColor("#174838");
+    case Color::Selection: return QColor("#C9F0DE");
+    case Color::Border: return QColor("#D5DFDA");
+    }
+    return QColor();
+}
+
+QFont AppStyle::scaledFont(QFont font)
+{
+    const qreal scale = UserPreferences::instance().accessibilityOptions().fontScalePercent / 100.0;
+    if (font.pointSizeF() > 0) font.setPointSizeF(font.pointSizeF() * scale);
+    else if (font.pixelSize() > 0) font.setPixelSize(qRound(font.pixelSize() * scale));
+    return font;
+}
+
+QString AppStyle::scaledStyleSheet(const QString& style, int percent)
+{
+    if (percent == 100) return style;
+    static const QRegularExpression sizePattern(QStringLiteral("font-size\\s*:\\s*(\\d+(?:\\.\\d+)?)px"));
+    QString scaled = style;
+    QVector<QRegularExpressionMatch> found;
+    auto iterator = sizePattern.globalMatch(style);
+    while (iterator.hasNext()) found.append(iterator.next());
+    for (auto it = found.crbegin(); it != found.crend(); ++it) {
+        const int size = qMax(8, qRound(it->captured(1).toDouble() * percent / 100.0));
+        scaled.replace(it->capturedStart(1), it->capturedLength(1), QString::number(size));
+    }
+    return scaled;
+}
+
+void AppStyle::applyAccessibility(QWidget& widget)
+{
+    const auto options = UserPreferences::instance().accessibilityOptions();
+    const QString current = widget.styleSheet();
+    const QString previous = widget.property("forest.scaledStyle").toString();
+    if (!widget.property("forest.baseStyle").isValid() || current != previous) {
+        widget.setProperty("forest.baseStyle", current);
+    }
+    QString style = scaledStyleSheet(widget.property("forest.baseStyle").toString(), options.fontScalePercent);
+    if (options.highContrast && !style.isEmpty()) {
+        if (!style.contains(QLatin1Char('{'))) style = QStringLiteral("* {") + style + QLatin1Char('}');
+        style += QStringLiteral(
+            " QPushButton:focus, QToolButton:focus, QComboBox:focus, QSpinBox:focus,"
+            " QLineEdit:focus, QCheckBox:focus, QRadioButton:focus { border:2px solid #173F33; }"
+            " QPushButton:disabled, QToolButton:disabled { color:#516D61; background:#DFE8E3; }");
+    }
+    widget.setProperty("forest.scaledStyle", style);
+    if (style != current) widget.setStyleSheet(style);
+    if (options.reducedMotion) {
+        if (auto* effect = qobject_cast<QGraphicsOpacityEffect*>(widget.graphicsEffect())) {
+            if (auto* animation = effect->findChild<QPropertyAnimation*>("smoothOpacityAnimation")) animation->stop();
+            effect->setOpacity(1.0);
+        }
+    }
+}
 
 QString AppStyle::styleSheet()
 {
@@ -168,16 +213,22 @@ QString AppStyle::styleSheet()
             color: rgba(247, 255, 247, 115);
         }
         QPushButton#btnPrimary {
-            background-color: #6ED4B5;
-            border-color: #8AE4CC;
-            color: #F7FFF7;
+            background-color: %1;
+            border-color: %1;
+            color: #FFFFFF;
         }
         QPushButton#btnPrimary:hover {
-            background-color: #7CE1C1;
-            border-color: #F2F4C6;
+            background-color: %2;
+            border-color: %2;
         }
         QPushButton#btnPrimary:pressed {
-            background-color: #4E9B82;
+            background-color: %3;
+        }
+        QPushButton#btnPrimary:focus {
+            border:2px solid #A2D8C1;
+        }
+        QPushButton#btnPrimary:disabled {
+            background-color:#DFE8E3; border-color:#CCD8D1; color:#516D61;
         }
         QPushButton#btnSecondary {
             background-color: #3E8D75;
@@ -347,7 +398,8 @@ QString AppStyle::styleSheet()
             background-color: #F2F4C6;
             color: #244538;
         }
-    )");
+    )").arg(color(Color::Primary).name(), color(Color::PrimaryHover).name(),
+            color(Color::PrimaryPressed).name());
 }
 
 void AppStyle::installSmoothInteractions(QApplication& app)

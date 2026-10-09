@@ -1,4 +1,4 @@
-#ifndef FOCUS_SESSION_COORDINATOR_H
+﻿#ifndef FOCUS_SESSION_COORDINATOR_H
 #define FOCUS_SESSION_COORDINATOR_H
 
 #include "core/FocusController.h"
@@ -29,7 +29,7 @@ public:
     bool start(const StartRequest& request);
     void pause();
     void resume();
-    void abandon();
+    bool abandon();
 
 signals:
     void terminalResultReady(uint32_t recordId, uint32_t status,

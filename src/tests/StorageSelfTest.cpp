@@ -2,6 +2,7 @@
 #include "core/CoinManager.h"
 #include "core/ChallengeManager.h"
 #include "core/FocusController.h"
+#include "tests/TestFocusClock.h"
 #include "core/FocusResultService.h"
 #include "core/DashboardSnapshotService.h"
 #include "core/FocusStatisticsQuery.h"
@@ -20,10 +21,12 @@
 #include <QCoreApplication>
 #include <QDate>
 #include <QDateTime>
+#include <QDataStream>
 #include <QDir>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTime>
+#include <QSqlQuery>
 
 #include <cstdint>
 #include <cstring>
@@ -103,10 +106,12 @@ bool testFocusCheckpointRecovery(const QString& path)
 {
     DatabaseManager activeDb(path.toStdString());
     if (!expect(activeDb.open(), "checkpoint database opens")) return false;
-    FocusController controller(activeDb);
+    TestFocusClock clock;
+    FocusController controller(activeDb, clock.clock());
     controller.startFocus(0, 10, FocusController::TimerMode::COUNTDOWN,
                           FocusController::FocusMode::STRICT_MODE, 0, false, false);
-    for (int i = 0; i < 30; ++i) controller.tick();
+    clock.advanceSeconds(30);
+    controller.tick();
 
     DatabaseManager recoveredDb(path.toStdString());
     if (!expect(recoveredDb.open(), "interrupted session database reopens")) return false;
@@ -137,24 +142,24 @@ bool testBackupRestore(const QString& root)
     const QString dataDir = QDir(root).filePath(QStringLiteral("backup_data"));
     const QString backups = QDir(root).filePath(QStringLiteral("backup_output"));
     QDir().mkpath(dataDir);
-    const QString dataFile = QDir(dataDir).filePath(QStringLiteral("sample.dat"));
+    const QString dataFile = QDir(dataDir).filePath(QStringLiteral("ui_settings.ini"));
     {
         QFile file(dataFile);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return false;
-        file.write("before");
+        file.write("[test]\nvalue=before\n");
     }
     QString backupDir, error;
     if (!expect(BackupService::createBackup(dataDir, backups, &backupDir, &error), "backup is created")) return false;
     {
         QFile file(dataFile);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) return false;
-        file.write("after");
+        file.write("[test]\nvalue=after\n");
     }
     if (!expect(BackupService::requestRestore(dataDir, backupDir, &error), "restore request is stored")) return false;
     QString restoredFrom;
     if (!expect(BackupService::restoreIfRequested(dataDir, &restoredFrom, &error), "restore request is applied")) return false;
     QFile restored(dataFile);
-    return expect(restored.open(QIODevice::ReadOnly | QIODevice::Text) && restored.readAll() == "before",
+    return expect(restored.open(QIODevice::ReadOnly | QIODevice::Text) && restored.readAll() == "[test]\nvalue=before\n",
                   "restore replaces changed data with the backup") &&
            expect(restoredFrom == backupDir, "restore reports the source backup");
 }
@@ -186,8 +191,8 @@ bool testWalletBackupRecovery(const QString& path)
 
     CoinManager wallet;
     wallet.setDataPath(path.toStdString());
-    return expect(wallet.load(), "wallet restores from backup") &&
-           expect(wallet.balance() == 10, "wallet uses the last valid backup balance");
+    return expect(!wallet.load(), "wallet rejects unsafe standalone backup rollback") &&
+           expect(!wallet.lastError().isEmpty(), "wallet explains full snapshot recovery");
 }
 
 bool testLegacyUserMigration(const QString& path)
@@ -222,13 +227,14 @@ bool testAchievementMaskMapping(const QString& sessionPath, const QString& walle
     ctx.lastSessionSuccess = true;
     ctx.lastPlantType = QStringLiteral("OakTree");
     ctx.totalSessions = 1;
+    ctx.totalSuccessCount = 1;
 
     achievements.checkAll(ctx);
     const uint32_t mask = wallet.getUnlockedAchievementMask();
     return expect((mask & (1u << 6)) != 0, "first_oak uses bit 6") &&
            expect((mask & (1u << 11)) != 0, "first_focus uses bit 11") &&
-           expect((mask & (1u << 0)) == 0, "first_oak does not overwrite old bit 0") &&
-           expect(wallet.balance() == 70, "achievement rewards are paid once on unlock");
+           expect((mask & (1u << 0)) != 0, "legacy first_focus keeps its own bit 0") &&
+           expect(wallet.balance() == 90, "both compatible first-focus achievements and oak pay once");
 }
 
 bool testFocusControllerCompletionKeepsDashboardFields(const QString& path)
@@ -236,7 +242,8 @@ bool testFocusControllerCompletionKeepsDashboardFields(const QString& path)
     DatabaseManager db(path.toStdString());
     if (!expect(db.open(), "focus controller database opens")) return false;
 
-    FocusController controller(db);
+    TestFocusClock clock;
+    FocusController controller(db, clock.clock());
     const qint64 beforeStart = QDateTime::currentDateTime().toSecsSinceEpoch();
     controller.startFocus(3, 10,
                           FocusController::TimerMode::COUNTDOWN,
@@ -258,6 +265,7 @@ bool testFocusControllerCompletionKeepsDashboardFields(const QString& path)
                 "running focus record binds to current system local date")) return false;
 
     for (int i = 0; i < 600; ++i) {
+        clock.advanceSeconds(1);
         controller.tick();
     }
 
@@ -356,6 +364,50 @@ bool testManagerFirstLaunchLoads(const QString& dirPath)
     return expect(challenges.load(), "missing challenges file is treated as first launch") &&
            expect(tags.load(), "missing tags file is treated as first launch") &&
            expect(guardian.load(), "missing guardian file is treated as first launch");
+}
+
+bool testTagCreation(const QString& root)
+{
+    const QString path = QDir(root).filePath("tag-creation.dat");
+    TagManager tags(path);
+    if (!expect(tags.load(), "tag creation fixture loads")) return false;
+    bool ok = expect(tags.addAndSave(QStringLiteral(" \t ")).status == TagManager::AddStatus::EmptyName &&
+                     tags.count() == 0 && !QFileInfo::exists(path),
+                     "empty tag input does not create data");
+    const auto first = tags.addAndSave(QStringLiteral("  Study  "));
+    ok &= expect(first.status == TagManager::AddStatus::Added && first.tag.id == 1 &&
+                 first.tag.name == QStringLiteral("Study") && first.tag.color == QStringLiteral("#A8C76A"),
+                 "creation returns normalized and persisted tag identity");
+    ok &= expect(tags.addAndSave(QStringLiteral("sTuDy")).status == TagManager::AddStatus::DuplicateName &&
+                 tags.count() == 1, "duplicate comparison is case insensitive");
+    StorageEnvelope::failNextWriteForTesting(path);
+    ok &= expect(tags.addAndSave(QStringLiteral("Read")).status == TagManager::AddStatus::SaveFailed &&
+                 tags.count() == 1 && tags.all().first().id == first.tag.id,
+                 "failed tag persistence restores the in-memory list");
+    TagManager afterFailure(path);
+    if (!afterFailure.load()) return false;
+    ok &= expect(afterFailure.count() == 1 && afterFailure.all().first().name == first.tag.name,
+                 "failed creation preserves the actual disk tags");
+    const auto second = tags.addAndSave(QStringLiteral("Read"));
+    ok &= expect(second.status == TagManager::AddStatus::Added && second.tag.id == 2 &&
+                 second.tag.color == QStringLiteral("#F8BF56"),
+                 "retry does not consume an ID or skip the palette");
+    TagManager reloaded(path);
+    if (!reloaded.load()) return false;
+    ok &= expect(reloaded.count() == 2 && reloaded.tag(second.tag.id).name == second.tag.name &&
+                 reloaded.tag(second.tag.id).color == second.tag.color,
+                 "created tags survive manager restart");
+    const QString exhaustedPath = QDir(root).filePath("tag-exhausted.dat");
+    QByteArray payload;
+    QDataStream stream(&payload, QIODevice::WriteOnly);
+    stream << quint32{1} << quint32{UINT32_MAX} << QStringLiteral("legacy") << QStringLiteral("#999999");
+    if (!StorageEnvelope::write(exhaustedPath, 0x46544731u, 1, payload)) return false;
+    TagManager exhausted(exhaustedPath);
+    if (!exhausted.load()) return false;
+    ok &= expect(exhausted.addAndSave(QStringLiteral("Next")).status == TagManager::AddStatus::LimitReached &&
+                 exhausted.count() == 1 && StorageEnvelope::read(exhaustedPath, 0x46544731u).payload == payload,
+                 "exhausted legacy ID cannot wrap to the reserved no-tag identity");
+    return ok;
 }
 
 bool testChallengeActionsPersist(const QString& sessionPath, const QString& challengePath)
@@ -615,6 +667,59 @@ bool testStatisticsQueryPeriodBoundaries()
 
 } // namespace
 
+bool testFinalGrowthStage(const QString& root)
+{
+    for (uint32_t plantType = 0; plantType < 6; ++plantType) {
+        DatabaseManager database(QDir(root).filePath(QStringLiteral("final-growth-%1.sqlite").arg(plantType)).toStdString());
+        if (!expect(database.open(), "final growth database opens")) return false;
+        TestFocusClock clock;
+        FocusController controller(database, clock.clock());
+        controller.startFocus(plantType, 10);
+        clock.advanceSeconds(600);
+        controller.tick();
+        const auto record = database.readById(0);
+        if (!expect(record && record->status == FocusRecordStatus::Success && record->growthStage == 3,
+                    "success persists the final growth stage for every plant")) return false;
+    }
+    return true;
+}
+
+bool testQueryErrors(const QString& root)
+{
+    DatabaseManager database(QDir(root).filePath("query-errors.sqlite").toStdString());
+    if (!expect(database.open(), "query fixture opens")) return false;
+    std::vector<FocusRecord> records(1);
+    uint32_t count = 7;
+    bool ok = expect(database.getAllRecords(records) && records.empty() && database.lastError().isEmpty(),
+                     "empty history is a successful query") &&
+              expect(database.count(count) && count == 0, "empty count is a successful query");
+    database.close();
+    records.resize(1);
+    count = 7;
+    ok &= expect(!database.getAllRecords(records) && records.size() == 1 && !database.lastError().isEmpty(),
+                 "closed database reports failure without clearing previous records");
+    ok &= expect(!database.count(count) && count == 7 && !database.lastError().isEmpty(),
+                 "failed count preserves previous value");
+    ok &= expect(!database.readById(0) && !database.lastError().isEmpty(), "failed read is not a missing record");
+    if (!database.open()) return false;
+    ok &= expect(!database.readById(0) && database.lastError().isEmpty(), "valid missing read clears prior error");
+    const QString connection = QStringLiteral("query_error_fixture");
+    {
+        auto sql = QSqlDatabase::addDatabase("QSQLITE", connection);
+        sql.setDatabaseName(database.databasePath());
+        if (!sql.open()) return false;
+        QSqlQuery query(sql);
+        if (!query.exec("DROP TABLE focus_records")) return false;
+        query.finish();
+        sql.close();
+    }
+    QSqlDatabase::removeDatabase(connection);
+    ok &= expect(!database.getAllRecords(records) && records.size() == 1 && !database.lastError().isEmpty(),
+                 "real SQL failure is not empty history");
+    ok &= expect(!database.count(count) && count == 7, "real SQL count failure is not zero");
+    return ok;
+}
+
 int main(int argc, char* argv[])
 {
     QCoreApplication app(argc, argv);
@@ -622,6 +727,9 @@ int main(int argc, char* argv[])
     if (!expect(dir.isValid(), "temporary directory is available")) return 1;
 
     bool ok = true;
+    ok &= testTagCreation(dir.path());
+    ok &= testQueryErrors(dir.path());
+    ok &= testFinalGrowthStage(dir.path());
     ok &= testCrashRecovery(QDir(dir.path()).filePath("crash_sessions.dat"));
     ok &= testPartialRecordRepair(QDir(dir.path()).filePath("partial_sessions.dat"));
     ok &= testBackupRecovery(QDir(dir.path()).filePath("backup_sessions.dat"));

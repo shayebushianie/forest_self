@@ -1,4 +1,4 @@
-#include "storage/StorageEnvelope.h"
+﻿#include "storage/StorageEnvelope.h"
 
 #include <QDataStream>
 #include <QDir>
@@ -106,6 +106,11 @@ ReadResult read(const QString& path, quint32 expectedMagic)
         return backup;
     }
     return primary;
+}
+
+ReadResult inspect(const QString& path, quint32 expectedMagic)
+{
+    return readOne(path, expectedMagic);
 }
 
 bool write(const QString& path, quint32 magic, quint16 version,

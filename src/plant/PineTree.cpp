@@ -1,5 +1,7 @@
 ﻿#include "plant/PineTree.h"
 
+#include "config/PlantCatalog.h"
+
 void PineTree::grow(int actualSeconds, int totalSeconds)
 {
     if (totalSeconds <= 0) return;
@@ -22,6 +24,6 @@ void PineTree::grow(int actualSeconds, int totalSeconds)
     }
 }
 
-std::string PineTree::getPlantName() const { return "PineTree"; }
+std::string PineTree::getPlantName() const { return PlantCatalog::byType(getPlantType()).internalName.toStdString(); }
 
-uint32_t PineTree::getPlantType() const { return 1; }
+uint32_t PineTree::getPlantType() const { return PlantTypeId::Pine; }

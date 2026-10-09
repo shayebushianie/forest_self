@@ -1,9 +1,10 @@
-#include "core/DashboardSnapshotService.h"
+﻿#include "core/DashboardSnapshotService.h"
 
 #include "core/CoinManager.h"
 #include "core/GuardianManager.h"
 #include "core/TagManager.h"
 #include "storage/DatabaseManager.h"
+#include <QSet>
 
 DashboardSnapshotService::DashboardSnapshotService(DatabaseManager& database, CoinManager& coins,
                                                    TagManager* tags, GuardianManager* guardian,
@@ -15,7 +16,10 @@ DashboardSnapshotService::DashboardSnapshotService(DatabaseManager& database, Co
 DashboardSnapshotService::ForestSnapshot DashboardSnapshotService::forest() const
 {
     ForestSnapshot snapshot;
-    snapshot.records = database_.getAllRecords();
+    if (!database_.getAllRecords(snapshot.records)) {
+        snapshot.error = database_.lastError();
+        return snapshot;
+    }
     if (tags_) {
         for (const TagDef& tag : tags_->all()) {
             snapshot.tagNames.insert(tag.id, tag.name);
@@ -28,15 +32,23 @@ DashboardSnapshotService::ChallengeSnapshot DashboardSnapshotService::challenges
 {
     ChallengeSnapshot snapshot;
     snapshot.coinBalance = coins_.balance();
-    snapshot.records = database_.getAllRecords();
+    if (!database_.getAllRecords(snapshot.records)) {
+        snapshot.error = database_.lastError();
+        return snapshot;
+    }
     if (!challenges_) return snapshot;
 
-    snapshot.challenges = challenges_->active();
-    for (const Challenge& challenge : challenges_->incoming()) {
-        if (challenge.status != ChallengeStatus::PENDING) continue;
-        Challenge pending = challenge;
-        challenges_->recalculateProgress(pending);
-        snapshot.challenges.append(pending);
+    QSet<uint32_t> seen;
+    QVector<Challenge> active;
+    if (!challenges_->active(active)) {
+        snapshot.error = database_.lastError();
+        if (snapshot.error.isEmpty()) snapshot.error = QStringLiteral("无法读取本地挑战进度。");
+        return snapshot;
+    }
+    for (const Challenge& challenge : active) {
+        if (seen.contains(challenge.id)) continue;
+        seen.insert(challenge.id);
+        snapshot.challenges.append(challenge);
     }
     return snapshot;
 }

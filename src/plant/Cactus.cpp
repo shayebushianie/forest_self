@@ -1,4 +1,6 @@
-#include "plant/Cactus.h"
+﻿#include "plant/Cactus.h"
+
+#include "config/PlantCatalog.h"
 
 void Cactus::grow(int actualSeconds, int totalSeconds)
 {
@@ -34,9 +36,9 @@ void Cactus::wither()
 
 uint32_t Cactus::getGrowthStage() const { return growthStage_; }
 
-uint32_t Cactus::getPlantType() const { return 5; }
+uint32_t Cactus::getPlantType() const { return PlantTypeId::Cactus; }
 
-std::string Cactus::getPlantName() const { return "Cactus"; }
+std::string Cactus::getPlantName() const { return PlantCatalog::byType(getPlantType()).internalName.toStdString(); }
 
 std::string Cactus::getStageName() const
 {

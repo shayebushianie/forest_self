@@ -1,4 +1,4 @@
-#ifndef SOCIAL_PAGES_H
+﻿#ifndef SOCIAL_PAGES_H
 #define SOCIAL_PAGES_H
 
 #include <QObject>
@@ -8,6 +8,7 @@ class QWidget;
 class QLineEdit;
 class QListWidget;
 class QLabel;
+class QPushButton;
 class FriendManager;
 
 class FriendsPageController final : public QObject {
@@ -24,6 +25,7 @@ private:
     void refreshBrowse(const QString& filter);
     void refreshRequests();
     void refreshFriends();
+    void refreshActions();
 
     FriendManager& friends_;
     QWidget* page_ = nullptr;
@@ -32,7 +34,13 @@ private:
     QListWidget* requestList_ = nullptr;
     QListWidget* friendList_ = nullptr;
     QLabel* summaryLabel_ = nullptr;
-    QWidget* challengeButton_ = nullptr;
+    QLabel* browseEmpty_ = nullptr;
+    QLabel* requestsEmpty_ = nullptr;
+    QLabel* friendsEmpty_ = nullptr;
+    QPushButton* sendButton_ = nullptr;
+    QPushButton* acceptButton_ = nullptr;
+    QPushButton* rejectButton_ = nullptr;
+    QPushButton* challengeButton_ = nullptr;
 };
 
 #endif // SOCIAL_PAGES_H

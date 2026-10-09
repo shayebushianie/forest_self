@@ -1,4 +1,4 @@
-#ifndef VARIANT_PLANTS_H
+﻿#ifndef VARIANT_PLANTS_H
 #define VARIANT_PLANTS_H
 
 #include "plant/Cactus.h"
@@ -21,6 +21,7 @@ public:
     const std::string& rarity() const { return rarity_; }
     const std::string& icon() const { return icon_; }
     const std::string& tintColor() const { return tintColor_; }
+    std::string imagePath() const { return ":/images/variants/" + variantId_ + ".png"; }
     const std::string& basePlantName() const { return basePlantName_; }
     uint32_t basePlantType() const { return basePlantType_; }
 

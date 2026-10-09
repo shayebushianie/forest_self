@@ -1,5 +1,8 @@
-<RCC>
+﻿<RCC>
     <qresource prefix="/">
+        <file>icons/hourglass.png</file>
+        <file>icons/timer.png</file>
+        <file>icons/LICENSE-lucide.txt</file>
         <file>images/oak.png</file>
         <file>images/pine.png</file>
         <file>images/rose.png</file>
@@ -30,5 +33,17 @@
         <file>images/cactus_middle.png</file>
         <file>images/cactus_final.png</file>
         <file>images/cactus_withered.png</file>
+        <file>images/variants/golden_oak.png</file>
+        <file>images/variants/silver_oak.png</file>
+        <file>images/variants/red_pine.png</file>
+        <file>images/variants/blue_pine.png</file>
+        <file>images/variants/pink_rose.png</file>
+        <file>images/variants/purple_rose.png</file>
+        <file>images/variants/golden_ginkgo.png</file>
+        <file>images/variants/red_ginkgo.png</file>
+        <file>images/variants/golden_sunflower.png</file>
+        <file>images/variants/black_sunflower.png</file>
+        <file>images/variants/gem_cactus.png</file>
+        <file>images/variants/flame_cactus.png</file>
     </qresource>
 </RCC>

@@ -1,4 +1,4 @@
-#ifndef USER_FEATURE_SERVICES_H
+﻿#ifndef USER_FEATURE_SERVICES_H
 #define USER_FEATURE_SERVICES_H
 
 #include <QString>
@@ -14,6 +14,8 @@ class ChallengeManager;
 class TagManager;
 class GuardianManager;
 class FocusSettlementManager;
+class FocusController;
+class CoinManager;
 
 // Owns feature managers that are scoped to the currently logged-in user.
 // Keeping their lifecycle here prevents the application entry point from
@@ -28,6 +30,9 @@ public:
 
     bool load();
     bool save();
+    bool saveForBackup(const FocusController& focus, CoinManager& wallet, QString* error);
+    bool recoverEconomy(CoinManager& wallet, QString* notice, QString* error);
+    QString lastError() const { return lastError_; }
 
     GachaManager* gacha() const;
     ForestLayoutManager* forestLayout() const;
@@ -45,6 +50,7 @@ private:
     std::unique_ptr<TagManager> tag_;
     std::unique_ptr<GuardianManager> guardian_;
     std::unique_ptr<FocusSettlementManager> settlements_;
+    QString lastError_;
 };
 
 #endif // USER_FEATURE_SERVICES_H

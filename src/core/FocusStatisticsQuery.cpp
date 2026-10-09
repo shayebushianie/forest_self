@@ -1,4 +1,5 @@
-#include "core/FocusStatisticsQuery.h"
+﻿#include "core/FocusStatisticsQuery.h"
+#include "core/FocusRecordSemantics.h"
 #include "config/PlantCatalog.h"
 
 #include <QDateTime>
@@ -13,12 +14,6 @@ namespace {
 QDateTime localStart(const FocusRecord& record)
 {
     return QDateTime::fromSecsSinceEpoch(static_cast<qint64>(record.startTimestamp), Qt::LocalTime);
-}
-
-bool isCompletedOrAbandoned(const FocusRecord& record)
-{
-    return record.status == FocusRecordStatus::Success ||
-           record.status == FocusRecordStatus::Abandoned;
 }
 
 qreal normalizedHash(uint32_t seed)
@@ -51,7 +46,7 @@ void FocusStatisticsQuery::Index::rebuild(const std::vector<FocusRecord>& record
     entries_.clear();
     entries_.reserve(records.size());
     for (const FocusRecord& record : records) {
-        if (!isCompletedOrAbandoned(record)) continue;
+        if (!isTerminalFocusStatus(record.status)) continue;
         entries_.push_back({&record, localStart(record).date()});
     }
     std::sort(entries_.begin(), entries_.end(), [](const Entry& lhs, const Entry& rhs) {
@@ -169,8 +164,10 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
     }
 
     QSet<uint32_t> projectIds;
-    QMap<QString, ProjectSlice> projectStats;
+    QMap<uint32_t, ProjectSlice> projectStats;
     QMap<uint32_t, int> treeCounts;
+    QVector<uint64_t> bucketSeconds(data.timeBuckets.size(), 0);
+    int growthStages = 0;
 
     const auto first = std::lower_bound(index.entries_.cbegin(), index.entries_.cend(), dateRange.first,
         [](const Index::Entry& entry, const QDate& date) { return entry.date < date; });
@@ -183,12 +180,15 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
         const QDateTime started = localStart(record);
         const QDate date = started.date();
 
-        const int minutes = std::max(1, static_cast<int>((record.actualSeconds + 59) / 60));
         ++data.focusCount;
         if (record.status == FocusRecordStatus::Success) {
             ++data.successCount;
-            data.totalMinutes += minutes;
-            data.growthValue += minutes * 2 + static_cast<int>(record.growthStage) * 6;
+            data.totalSeconds += record.actualSeconds;
+            growthStages += static_cast<int>(record.growthStage) * 6;
+        } else if (record.status == FocusRecordStatus::Failed) {
+            ++data.failedCount;
+        } else if (isInterruptedFocus(record)) {
+            ++data.interruptedCount;
         } else {
             ++data.abandonedCount;
         }
@@ -200,13 +200,16 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
         if (period == Period::Week) bucket = std::clamp(date.dayOfWeek() - 1, 0, lastBucket);
         if (period == Period::Month) bucket = std::clamp(date.day() - 1, 0, lastBucket);
         if (period == Period::Year) bucket = std::clamp(date.month() - 1, 0, lastBucket);
-        if (record.status == FocusRecordStatus::Success) data.timeBuckets[bucket] += minutes;
+        if (record.status == FocusRecordStatus::Success) bucketSeconds[bucket] += record.actualSeconds;
 
         const QString project = tagName(tagNames, record.tagId);
-        ProjectSlice& projectStat = projectStats[project];
+        ProjectSlice& projectStat = projectStats[record.tagId];
         projectStat.name = project;
+        projectStat.tagId = record.tagId;
         ++projectStat.totalCount;
         if (record.status == FocusRecordStatus::Success) ++projectStat.successCount;
+        else if (record.status == FocusRecordStatus::Failed) ++projectStat.failedCount;
+        else if (isInterruptedFocus(record)) ++projectStat.interruptedCount;
         else ++projectStat.abandonedCount;
 
         ++treeCounts[record.plantType];
@@ -217,7 +220,7 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
             started.toSecsSinceEpoch(),
             timeText,
             project,
-            record.status == FocusRecordStatus::Success ? QStringLiteral("成功") : QStringLiteral("放弃"),
+            FocusRecordSemantics::statusText(record),
             record.status == FocusRecordStatus::Success ? QColor("#4FAE8B") : QColor("#B98A5A")
         });
 
@@ -227,13 +230,18 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
         data.islandPlants.push_back({
             record.recordId,
             record.plantType,
-            record.status == FocusRecordStatus::Abandoned,
+            record.status != FocusRecordStatus::Success,
             0.16 + normalizedHash(seed) * 0.68,
             0.16 + normalizedHash(seed ^ 0x9E3779B9u) * 0.68,
             0.76 + normalizedHash(seed ^ 0x85EBCA6Bu) * 0.28,
             seed
         });
     }
+
+    data.totalMinutes = FocusRecordSemantics::wholeMinutes(data.totalSeconds);
+    data.growthValue = data.totalMinutes * 2 + growthStages;
+    for (int i = 0; i < data.timeBuckets.size(); ++i)
+        data.timeBuckets[i] = FocusRecordSemantics::wholeMinutes(bucketSeconds[i]);
 
     data.projectCount = projectIds.size();
     data.hasData = data.focusCount > 0;
@@ -261,6 +269,8 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
             other.totalCount += data.projects[i].totalCount;
             other.successCount += data.projects[i].successCount;
             other.abandonedCount += data.projects[i].abandonedCount;
+            other.failedCount += data.projects[i].failedCount;
+            other.interruptedCount += data.projects[i].interruptedCount;
         }
         while (data.projects.size() > 3) data.projects.pop_back();
         other.ratio = static_cast<double>(other.totalCount) / data.focusCount;
@@ -276,7 +286,7 @@ FocusStatisticsQuery::Snapshot FocusStatisticsQuery::query(
 
     for (auto it = treeCounts.cbegin(); it != treeCounts.cend(); ++it) {
         const PlantDefinition& plant = PlantCatalog::byType(it.key());
-        data.trees.push_back({plant.displayName, it.value(), plant.type});
+        data.trees.push_back({plant.displayName, it.value(), it.key()});
     }
     std::sort(data.trees.begin(), data.trees.end(),
               [](const TreeRank& a, const TreeRank& b) { return a.count > b.count; });

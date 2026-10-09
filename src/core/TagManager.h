@@ -1,4 +1,4 @@
-#ifndef TAGMANAGER_H
+﻿#ifndef TAGMANAGER_H
 #define TAGMANAGER_H
 
 #include <QString>
@@ -13,6 +13,12 @@ struct TagDef {
 
 class TagManager {
 public:
+    enum class AddStatus { Added, EmptyName, DuplicateName, LimitReached, SaveFailed };
+    struct AddResult {
+        AddStatus status;
+        TagDef tag{0, {}, {}};
+    };
+
     explicit TagManager(const QString& filePath);
 
     bool load();
@@ -23,6 +29,7 @@ public:
     QString name(uint32_t id) const;
     int count() const { return m_tags.size(); }
 
+    AddResult addAndSave(const QString& name);
     uint32_t add(const QString& name, const QString& color);
     bool rename(uint32_t id, const QString& name);
     bool recolor(uint32_t id, const QString& color);

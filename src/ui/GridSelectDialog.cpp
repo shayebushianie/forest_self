@@ -1,5 +1,7 @@
 ﻿#include "ui/GridSelectDialog.h"
 
+#include <QLabel>
+
 GridSelectDialog::GridSelectDialog(DatabaseManager& db, QWidget* parent)
     : QDialog(parent), db_(db)
 {
@@ -13,7 +15,17 @@ GridSelectDialog::GridSelectDialog(DatabaseManager& db, QWidget* parent)
     layout->setContentsMargins(15, 15, 15, 15);
 
     std::vector<bool> occupied(64, false);
-    auto records = db_.getAllRecords();
+    std::vector<FocusRecord> records;
+    if (!db_.getAllRecords(records)) {
+        auto* error = new QLabel(QStringLiteral("无法读取已有位置，请关闭后重试。\n%1").arg(db_.lastError()), this);
+        error->setWordWrap(true);
+        layout->addWidget(error, 0, 0);
+        auto* close = new QPushButton(QStringLiteral("关闭"), this);
+        DialogPresenter::setSecondary(close);
+        connect(close, &QPushButton::clicked, this, &QDialog::reject);
+        layout->addWidget(close, 1, 0);
+        return;
+    }
     for (const auto& rec : records) {
         if (rec.gridIndex < 64) occupied[rec.gridIndex] = true;
     }

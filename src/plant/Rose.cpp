@@ -1,5 +1,7 @@
 ﻿#include "plant/Rose.h"
 
+#include "config/PlantCatalog.h"
+
 void Rose::grow(int actualSeconds, int totalSeconds)
 {
     if (totalSeconds <= 0) return;
@@ -27,4 +29,4 @@ void Rose::grow(int actualSeconds, int totalSeconds)
     }
 }
 
-std::string Rose::getPlantName() const { return "Rose"; }
+std::string Rose::getPlantName() const { return PlantCatalog::byType(getPlantType()).internalName.toStdString(); }

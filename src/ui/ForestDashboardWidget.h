@@ -1,4 +1,4 @@
-#ifndef FORESTDASHBOARDWIDGET_H
+﻿#ifndef FORESTDASHBOARDWIDGET_H
 #define FORESTDASHBOARDWIDGET_H
 
 #include <QWidget>
@@ -19,6 +19,10 @@
 class QPainter;
 class QRectF;
 class QMouseEvent;
+class QLabel;
+class QToolButton;
+class QResizeEvent;
+class PaintedActionButton;
 
 // Desktop overview dashboard for "我的森林".
 class ForestDashboardWidget : public QWidget {
@@ -29,7 +33,7 @@ public:
         QDate date;
         uint32_t tagId = std::numeric_limits<uint32_t>::max();
         uint32_t plantType = std::numeric_limits<uint32_t>::max();
-        int terminalState = -1; // -1 all, 0 success, 1 abandoned
+        int terminalState = -1; // -1 all, 0 success, 1 abandoned, 2 failed, 3 interrupted
 
         bool isActive() const {
             return date.isValid() || tagId != std::numeric_limits<uint32_t>::max() ||
@@ -53,9 +57,12 @@ signals:
 protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
+    friend class UiSmokeTest;
     enum class PeriodMode {
         Day,
         Week,
@@ -70,6 +77,11 @@ private:
     using DashboardData = FocusStatisticsQuery::Snapshot;
 
     const DashboardData& buildData() const;
+    QRectF islandPanelRect() const;
+    qreal islandNavigationHeight() const;
+    void updateIslandNavigation();
+    void changeIslandPage(int delta);
+    void syncKeyboardActions();
 
     void drawHeader(QPainter& painter, const QRectF& rect) const;
     void drawIslandPanel(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
@@ -78,7 +90,7 @@ private:
     void drawProjectCard(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
     void drawTreeCard(QPainter& painter, const QRectF& rect, const DashboardData& data) const;
 
-    void drawCard(QPainter& painter, const QRectF& rect, qreal radius = 22.0) const;
+    void drawCard(QPainter& painter, const QRectF& rect, qreal radius = 8.0) const;
     void drawTree(QPainter& painter, QPointF base, qreal scale, const QColor& crown) const;
     void drawWitheredTree(QPainter& painter, QPointF base, qreal scale) const;
     void drawPlantImage(QPainter& painter, QPointF base, qreal scale,
@@ -102,6 +114,16 @@ private:
     mutable QVector<QPair<QRectF, uint32_t>> islandPlantHitRects_;
     mutable std::optional<DashboardData> cachedData_;
     RecordFilter recordFilter_;
+    static constexpr int IslandPageCapacity = 9;
+    int islandPage_ = 0;
+    uint32_t hoveredRecordId_ = std::numeric_limits<uint32_t>::max();
+    int hoveredHeaderAction_ = -1;
+    QWidget* islandNavigation_ = nullptr;
+    QLabel* islandSummary_ = nullptr;
+    QLabel* islandPageLabel_ = nullptr;
+    QToolButton* islandPrevious_ = nullptr;
+    QToolButton* islandNext_ = nullptr;
+    QVector<PaintedActionButton*> keyboardActions_;
 };
 
 #endif // FORESTDASHBOARDWIDGET_H

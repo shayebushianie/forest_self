@@ -1,4 +1,4 @@
-#ifndef GUARDIANDASHBOARDWIDGET_H
+﻿#ifndef GUARDIANDASHBOARDWIDGET_H
 #define GUARDIANDASHBOARDWIDGET_H
 
 #include <QRectF>
@@ -35,8 +35,9 @@ private:
         QRectF header;
         QRectF hero;
         QRectF stats;
-        QRectF goal;
         QRectF timeline;
+        QRectF goalInput;
+        qreal statsContentTop = 0.0;
     };
 
     LayoutRects calculateLayout() const;
@@ -44,15 +45,14 @@ private:
     void drawBackground(QPainter& painter) const;
     void drawHeader(QPainter& painter, const QRectF& rect) const;
     void drawHero(QPainter& painter, const QRectF& rect) const;
-    void drawStats(QPainter& painter, const QRectF& rect) const;
-    void drawGoalCard(QPainter& painter, const QRectF& rect) const;
+    void drawStats(QPainter& painter, const QRectF& rect, const QRectF& goalInput,
+                   qreal contentTop) const;
     void drawTimeline(QPainter& painter, const QRectF& rect) const;
     void drawPlantIcon(QPainter& painter, const QRectF& rect) const;
-    void drawCard(QPainter& painter, const QRectF& rect, qreal radius = 24.0) const;
-    void drawStatCard(QPainter& painter, const QRectF& rect, const QString& icon,
-                      const QString& value, const QString& title) const;
+    void drawCard(QPainter& painter, const QRectF& rect, qreal radius = 8.0) const;
     void drawTextFit(QPainter& painter, const QRectF& rect, const QString& text,
-                     int flags, int minPointSize = 8) const;
+                     int flags, int basePixelSize, int minPixelSize = 10,
+                     bool bold = false) const;
 
     uint32_t todayMinutes_ = 0;
     uint32_t dailyGoalMinutes_ = 30;
@@ -60,7 +60,6 @@ private:
     uint32_t longestStreak_ = 0;
     uint32_t totalMinutes_ = 0;
 
-    qreal phase_ = 0.0;
     qreal shownProgress_ = 0.0;
     qreal targetProgress_ = 0.0;
     QPixmap plantIcon_;

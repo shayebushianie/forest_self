@@ -1,9 +1,10 @@
-#ifndef FOCUS_RESULT_SERVICE_H
+﻿#ifndef FOCUS_RESULT_SERVICE_H
 #define FOCUS_RESULT_SERVICE_H
 
 #include <QVector>
 #include <QString>
 #include <cstdint>
+#include <vector>
 
 #include "common/DatabaseCommon.h"
 #include "core/AchievementEngine.h"
@@ -40,9 +41,11 @@ public:
     Outcome applyTerminalRecord(uint32_t recordId);
     QVector<Outcome> recoverPendingRecords();
     QVector<int> evaluateAchievements(const FocusRecord* latestRecord = nullptr);
+    bool lastAchievementEvaluationSucceeded() const { return lastAchievementEvaluationSucceeded_; }
 
 private:
-    AchievementEngine::Context buildAchievementContext(const FocusRecord* latestRecord) const;
+    AchievementEngine::Context buildAchievementContext(const std::vector<FocusRecord>& records,
+                                                       const FocusRecord* latestRecord) const;
 
     DatabaseManager& database_;
     CoinManager& coins_;

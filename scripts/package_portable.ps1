@@ -10,22 +10,20 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$buildPath = Join-Path $repoRoot $BuildDir
-$outputPath = Join-Path $repoRoot $OutputDir
+. (Join-Path $PSScriptRoot "PackageSafety.ps1")
+. (Join-Path $PSScriptRoot "RuntimeSmoke.ps1")
+
+$packagePaths = Assert-ForestPortableOutputSafe -RepoRoot $repoRoot -BuildDir $BuildDir -OutputDir $OutputDir
+$buildPath = $packagePaths.BuildPath
+$outputPath = $packagePaths.OutputDirectory
+$zipPath = $packagePaths.ZipPath
 $exeName = "forest.exe"
 $builtExe = Join-Path $buildPath $exeName
-$portableExe = Join-Path $outputPath $exeName
 
 function Require-File([string]$path, [string]$message) {
     if (-not (Test-Path -LiteralPath $path)) {
         throw "${message}: $path"
     }
-}
-
-function Test-BinaryContainsText([string]$path, [string]$needle) {
-    $bytes = [System.IO.File]::ReadAllBytes($path)
-    $text = [System.Text.Encoding]::ASCII.GetString($bytes)
-    return $text.Contains($needle)
 }
 
 function Resolve-QtBin {
@@ -78,15 +76,8 @@ if (Test-Path -LiteralPath $cmakeCache) {
     }
 }
 if (-not $runtimeBin) {
-    $compiler = (Get-Command c++.exe -ErrorAction SilentlyContinue).Source
-    if (-not $compiler) {
-        $compiler = (Get-Command g++.exe -ErrorAction SilentlyContinue).Source
-    }
-    if ($compiler) {
-        $runtimeBin = Split-Path $compiler -Parent
-    }
+    throw "Matching compiler not recorded in CMakeCache.txt; refusing to guess runtime DLLs from PATH."
 }
-$runtimeSearchDirs = @($runtimeBin, $qtBin) | Where-Object { $_ } | Select-Object -Unique
 
 if (-not $NoBuild) {
     cmake --build $buildPath --config $Configuration
@@ -97,69 +88,65 @@ if (-not $NoBuild) {
 
 Require-File $builtExe "Built executable not found"
 
-if (Test-Path -LiteralPath $outputPath) {
-    Remove-Item -LiteralPath $outputPath -Recurse -Force
-}
-New-Item -ItemType Directory -Path $outputPath | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $outputPath "app_data") | Out-Null
-New-Item -ItemType File -Path (Join-Path $outputPath "forest.portable") -Force | Out-Null
-Copy-Item -LiteralPath $builtExe -Destination $portableExe
+$outputLeaf = Split-Path -Leaf $outputPath
+$stageId = [Guid]::NewGuid().ToString("N")
+$stagingRoot = Join-Path $packagePaths.ArtifactRoot ".$outputLeaf.stage-$stageId"
+$stagingOutput = Join-Path $stagingRoot $outputLeaf
+$stagedExe = Join-Path $stagingOutput $exeName
+$stagedZip = Join-Path $packagePaths.ArtifactRoot ".$outputLeaf.stage-$stageId.zip"
 
-& $windeployqt $portableExe --no-compiler-runtime
+foreach ($path in @($stagingRoot, $stagingOutput, $stagedZip)) {
+    Assert-ForestNoReparsePoints -Path $path
+    if (Test-Path -LiteralPath $path) {
+        throw "Staging path already exists; refusing to overwrite it: $path"
+    }
+}
+New-Item -ItemType Directory -Path $packagePaths.ArtifactRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $stagingRoot | Out-Null
+New-Item -ItemType Directory -Path $stagingOutput | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $stagingOutput "app_data") | Out-Null
+New-Item -ItemType File -Path (Join-Path $stagingOutput "forest.portable") | Out-Null
+Copy-Item -LiteralPath $builtExe -Destination $stagedExe
+
+& $windeployqt $stagedExe --no-compiler-runtime
 if ($LASTEXITCODE -ne 0) {
     throw "windeployqt failed."
 }
 
 foreach ($dll in @("libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll")) {
-    $source = $null
-    foreach ($dir in $runtimeSearchDirs) {
-        $candidate = Join-Path $dir $dll
-        if (Test-Path -LiteralPath $candidate) {
-            $source = $candidate
-            break
-        }
-    }
+    $source = Join-Path $runtimeBin $dll
     Require-File $source "Compiler runtime DLL not found"
-    Copy-Item -LiteralPath $source -Destination (Join-Path $outputPath $dll) -Force
+    Copy-Item -LiteralPath $source -Destination (Join-Path $stagingOutput $dll)
 }
 
-$pthread = Join-Path $outputPath "libwinpthread-1.dll"
-if (-not (Test-BinaryContainsText $pthread "clock_gettime64")) {
-    throw "Packaged libwinpthread-1.dll does not contain clock_gettime64."
-}
+Assert-ForestRuntimeComplete $stagedExe
 
 if ($SmokeTest) {
-    $process = Start-Process -FilePath $portableExe -WorkingDirectory $outputPath -PassThru -WindowStyle Hidden
-    Start-Sleep -Seconds 3
-    if ($process.HasExited) {
-        throw "Portable executable exited during smoke test."
+    $smokeRoot = Join-Path ([IO.Path]::GetTempPath()) "forest-portable-smoke-$stageId"
+    Assert-ForestNoReparsePoints -Path $smokeRoot
+    if (Test-Path -LiteralPath $smokeRoot) {
+        throw "Smoke-test fixture path already exists; refusing to overwrite it: $smokeRoot"
     }
-    Stop-Process -Id $process.Id -Force
-    Wait-Process -Id $process.Id -Timeout 5 -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $smokeRoot | Out-Null
+    Copy-Item -LiteralPath $stagingOutput -Destination $smokeRoot -Recurse
+    $smokeOutput = Join-Path $smokeRoot $outputLeaf
+    $smokeExe = Join-Path $smokeOutput $exeName
+    Invoke-ForestRuntimeSmoke $smokeExe | Out-Null
+    Write-Host "Smoke-test fixture retained:"
+    Write-Host "  $smokeRoot"
 }
 
-$appDataPath = Join-Path $outputPath "app_data"
-if (Test-Path -LiteralPath $appDataPath) {
-    for ($attempt = 1; $attempt -le 5; $attempt++) {
-        try {
-            Remove-Item -LiteralPath $appDataPath -Recurse -Force
-            break
-        } catch {
-            if ($attempt -eq 5) {
-                throw
-            }
-            Start-Sleep -Milliseconds 300
-        }
-    }
-}
-New-Item -ItemType Directory -Path $appDataPath | Out-Null
-New-Item -ItemType File -Path (Join-Path $outputPath "forest.portable") -Force | Out-Null
+Compress-Archive -LiteralPath $stagingOutput -DestinationPath $stagedZip
 
-$zipPath = Join-Path $repoRoot "$OutputDir.zip"
-if (Test-Path -LiteralPath $zipPath) {
-    Remove-Item -LiteralPath $zipPath -Force
+$packagePaths = Assert-ForestPortableOutputSafe -RepoRoot $repoRoot -BuildDir $BuildDir -OutputDir $OutputDir
+[IO.Directory]::Move($stagingOutput, $outputPath)
+[IO.File]::Move($stagedZip, $zipPath)
+
+$remainingStageItems = @(Get-ChildItem -Force -LiteralPath $stagingRoot)
+if ($remainingStageItems.Count -eq 0) {
+    Assert-ForestNoReparsePoints -Path $stagingRoot
+    Remove-Item -LiteralPath $stagingRoot -Force
 }
-Compress-Archive -LiteralPath $outputPath -DestinationPath $zipPath
 
 Write-Host "Portable package created:"
 Write-Host "  $outputPath"

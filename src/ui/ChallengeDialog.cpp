@@ -1,4 +1,4 @@
-#include "ui/ChallengeDialog.h"
+﻿#include "ui/ChallengeDialog.h"
 #include "ui/DialogPresenter.h"
 #include <QVBoxLayout>
 #include <QGroupBox>
@@ -18,6 +18,9 @@ ChallengeDialog::ChallengeDialog(ChallengeManager* mgr,
     setMinimumSize(650, 500);
 
     auto* mainLayout = new QVBoxLayout(this);
+    auto* localNotice = new QLabel(QStringLiteral("同设备本地挑战：显示当前账户的进度，不跨设备同步。"), this);
+    localNotice->setWordWrap(true);
+    mainLayout->addWidget(localNotice);
 
     // --- create challenge ---
     auto* createGroup = new QGroupBox(QStringLiteral("创建新挑战"));
@@ -84,7 +87,11 @@ ChallengeDialog::ChallengeDialog(ChallengeManager* mgr,
 }
 
 void ChallengeDialog::refreshActive() {
-    auto challenges = mgr_->active();
+    QVector<Challenge> challenges;
+    if (!mgr_->active(challenges)) {
+        DialogPresenter::error(this, QStringLiteral("挑战进度读取失败"), QStringLiteral("原列表已保留，请检查专注数据后重试。"));
+        return;
+    }
     activeTable_->setRowCount(challenges.size());
     for (int i = 0; i < challenges.size(); ++i) {
         auto& c = challenges[i];
@@ -114,14 +121,16 @@ void ChallengeDialog::refreshActive() {
             hl->addWidget(rejectBtn);
             activeTable_->setCellWidget(i, 4, w);
             connect(acceptBtn, &QPushButton::clicked, this, [this, id = c.id]() {
-                mgr_->acceptChallenge(id);
-                mgr_->save();
+                if (!mgr_->acceptChallenge(id))
+                    DialogPresenter::warning(this, QStringLiteral("未接受挑战"),
+                        QStringLiteral("挑战已过期、状态已改变或保存失败，请刷新后重试。"));
                 refreshActive();
                 refreshHistory();
             });
             connect(rejectBtn, &QPushButton::clicked, this, [this, id = c.id]() {
-                mgr_->rejectChallenge(id);
-                mgr_->save();
+                if (!mgr_->rejectChallenge(id))
+                    DialogPresenter::warning(this, QStringLiteral("未拒绝挑战"),
+                        QStringLiteral("状态已改变或保存失败，原挑战状态已保留。"));
                 refreshActive();
                 refreshHistory();
             });
@@ -155,7 +164,10 @@ void ChallengeDialog::refreshHistory() {
             resultStr = QStringLiteral("⏰ 已过期");
         historyTable_->setItem(i, 2, new QTableWidgetItem(resultStr));
 
-        mgr_->recalculateProgress(const_cast<Challenge&>(c));
+        if (!mgr_->recalculateProgress(c)) {
+            historyTable_->setItem(i, 3, new QTableWidgetItem(QStringLiteral("读取失败，请重试")));
+            continue;
+        }
         uint32_t myProgress = (c.creatorId == mgr_->localUserId())
                                 ? c.creatorProgress : c.targetProgress;
         historyTable_->setItem(i, 3, new QTableWidgetItem(
@@ -173,10 +185,12 @@ void ChallengeDialog::onCreateClicked() {
     uint32_t fid = friendCombo_->currentData().toUInt();
     uint32_t mins = static_cast<uint32_t>(minutesSpin_->value());
     QDate end = endDateEdit_->date();
-    mgr_->createChallenge(fid, mins, end);
-    mgr_->save();
-    DialogPresenter::information(this, QStringLiteral("成功"),
-                             QStringLiteral("挑战已发送！"));
+    if (!mgr_->createChallenge(fid, mins, end)) {
+        DialogPresenter::warning(this, QStringLiteral("挑战未发送"),
+            QStringLiteral("目标、截止日期无效或保存失败，请检查后重试。"));
+        return;
+    }
+    DialogPresenter::information(this, QStringLiteral("成功"), QStringLiteral("本地挑战已发送。"));
     refreshActive();
     refreshHistory();
 }

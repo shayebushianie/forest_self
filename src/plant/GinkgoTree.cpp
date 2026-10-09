@@ -1,4 +1,6 @@
-#include "plant/GinkgoTree.h"
+﻿#include "plant/GinkgoTree.h"
+
+#include "config/PlantCatalog.h"
 
 void GinkgoTree::grow(int actualSeconds, int totalSeconds)
 {
@@ -22,6 +24,6 @@ void GinkgoTree::grow(int actualSeconds, int totalSeconds)
     }
 }
 
-std::string GinkgoTree::getPlantName() const { return "GinkgoTree"; }
+std::string GinkgoTree::getPlantName() const { return PlantCatalog::byType(getPlantType()).internalName.toStdString(); }
 
-uint32_t GinkgoTree::getPlantType() const { return 3; }
+uint32_t GinkgoTree::getPlantType() const { return PlantTypeId::Ginkgo; }

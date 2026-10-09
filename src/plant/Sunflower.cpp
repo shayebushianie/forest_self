@@ -1,4 +1,6 @@
-#include "plant/Sunflower.h"
+﻿#include "plant/Sunflower.h"
+
+#include "config/PlantCatalog.h"
 
 void Sunflower::grow(int actualSeconds, int totalSeconds)
 {
@@ -27,6 +29,6 @@ void Sunflower::grow(int actualSeconds, int totalSeconds)
     }
 }
 
-std::string Sunflower::getPlantName() const { return "Sunflower"; }
+std::string Sunflower::getPlantName() const { return PlantCatalog::byType(getPlantType()).internalName.toStdString(); }
 
-uint32_t Sunflower::getPlantType() const { return 4; }
+uint32_t Sunflower::getPlantType() const { return PlantTypeId::Sunflower; }

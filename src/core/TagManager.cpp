@@ -1,9 +1,11 @@
-#include "core/TagManager.h"
+﻿#include "core/TagManager.h"
 #include "storage/StorageEnvelope.h"
 
 #include <QBuffer>
 #include <QDataStream>
 #include <QFile>
+#include <QStringList>
+#include <limits>
 
 namespace {
 
@@ -93,6 +95,28 @@ QString TagManager::name(uint32_t id) const
     for (const TagDef& item : m_tags)
         if (item.id == id) return item.name;
     return QString::fromUtf8("\xE6\x97\xA0\xE6\xA0\x87\xE7\xAD\xBE");
+}
+
+TagManager::AddResult TagManager::addAndSave(const QString& input)
+{
+    const QString name = input.trimmed();
+    if (name.isEmpty()) return {AddStatus::EmptyName};
+    for (const TagDef& tag : m_tags) {
+        if (tag.name.compare(name, Qt::CaseInsensitive) == 0) return {AddStatus::DuplicateName};
+    }
+    if (m_tags.size() >= static_cast<int>(kMaxTagCount)) return {AddStatus::LimitReached};
+    for (const TagDef& tag : m_tags) {
+        if (tag.id == std::numeric_limits<uint32_t>::max()) return {AddStatus::LimitReached};
+    }
+    static const QStringList palette = {QStringLiteral("#A8C76A"), QStringLiteral("#F8BF56"),
+                                        QStringLiteral("#59C8C4"), QStringLiteral("#B8A8E7"),
+                                        QStringLiteral("#F08A7C"), QStringLiteral("#78A9E3")};
+    add(name, palette.at(m_tags.size() % palette.size()));
+    if (!save()) {
+        m_tags.removeLast();
+        return {AddStatus::SaveFailed};
+    }
+    return {AddStatus::Added, m_tags.last()};
 }
 
 uint32_t TagManager::add(const QString& name, const QString& color)

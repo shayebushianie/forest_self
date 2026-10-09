@@ -1,4 +1,5 @@
-#include "ui/SidebarNavigation.h"
+﻿#include "ui/SidebarNavigation.h"
+#include "config/UserPreferences.h"
 
 #include <QAbstractAnimation>
 #include <QPropertyAnimation>
@@ -31,6 +32,15 @@ void SidebarNavigation::toggle(uint32_t coinBalance)
     const int endWidth = expanded_ ? 60 : 180;
     expanded_ = !expanded_;
     coinBalance_ = coinBalance;
+    for (auto* animation : sidebar_->findChildren<QPropertyAnimation*>(QString(), Qt::FindDirectChildrenOnly)) {
+        animation->stop();
+        animation->deleteLater();
+    }
+    if (UserPreferences::instance().accessibilityOptions().reducedMotion) {
+        sidebar_->setFixedWidth(endWidth);
+        applyLabels();
+        return;
+    }
 
     auto* minAnimation = new QPropertyAnimation(sidebar_, "minimumWidth", sidebar_);
     minAnimation->setDuration(220);
@@ -51,7 +61,9 @@ void SidebarNavigation::setCoinBalance(uint32_t coinBalance)
 {
     coinBalance_ = coinBalance;
     if (coinButton_) {
-        coinButton_->setText(QStringLiteral("  🪙 %1").arg(coinBalance_));
+        coinButton_->setText(expanded_ ? QStringLiteral("  🪙 %1").arg(coinBalance_) : QStringLiteral("🪙"));
+        coinButton_->setToolTip(QStringLiteral("金币详情：%1 金币").arg(coinBalance_));
+        coinButton_->setAccessibleName(coinButton_->toolTip());
     }
 }
 
@@ -59,9 +71,15 @@ void SidebarNavigation::applyLabels()
 {
     if (toggleButton_) {
         toggleButton_->setText(expanded_ ? QStringLiteral("  ☰  收起菜单") : QStringLiteral("  ☰"));
+        toggleButton_->setToolTip(expanded_ ? QStringLiteral("收起菜单") : QStringLiteral("展开菜单"));
+        toggleButton_->setAccessibleName(toggleButton_->toolTip());
     }
     for (const Item& item : items_) {
-        if (item.button) item.button->setText(expanded_ ? item.expandedText : item.collapsedText);
+        if (item.button) {
+            item.button->setText(expanded_ ? item.expandedText : item.collapsedText.trimmed());
+            item.button->setToolTip(item.expandedText.trimmed());
+            item.button->setAccessibleName(item.expandedText.trimmed());
+        }
     }
     setCoinBalance(coinBalance_);
 }

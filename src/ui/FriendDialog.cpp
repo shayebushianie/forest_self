@@ -1,4 +1,4 @@
-#include "FriendDialog.h"
+﻿#include "FriendDialog.h"
 #include "core/FriendManager.h"
 #include "core/ChallengeManager.h"
 #include "ui/ChallengeDialog.h"
@@ -380,9 +380,12 @@ void FriendDialog::openFriendForest()
     // Friend forest dialog: show friend's garden
     auto* friendDb = new DatabaseManager(
         QStringLiteral("data/user_%1/records.db").arg(friendId).toStdString());
-    friendDb->open();
-
-    auto records = friendDb->getAllRecords();
+    std::vector<FocusRecord> records;
+    if (!friendDb->open() || !friendDb->getAllRecords(records)) {
+        DialogPresenter::error(this, QStringLiteral("好友森林读取失败"), friendDb->lastError());
+        delete friendDb;
+        return;
+    }
     QStringList info;
     uint32_t total = 0, success = 0, totalSecs = 0;
     for (const auto& r : records) {

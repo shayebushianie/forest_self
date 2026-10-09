@@ -1,4 +1,4 @@
-#ifndef FOCUS_SETTLEMENT_MANAGER_H
+﻿#ifndef FOCUS_SETTLEMENT_MANAGER_H
 #define FOCUS_SETTLEMENT_MANAGER_H
 
 #include <QSet>
@@ -20,6 +20,7 @@ public:
     bool isPending(uint32_t recordId) const;
     bool isSettled(uint32_t recordId) const;
     QVector<uint32_t> pendingRecordIds() const;
+    QVector<uint32_t> confirmedRecordIds() const;
 
 private:
     bool initializeFromExistingRecords();
@@ -28,6 +29,7 @@ private:
     DatabaseManager& database_;
     QSet<uint32_t> pending_;
     QSet<uint32_t> settled_;
+    QSet<uint32_t> confirmed_;
 };
 
 #endif // FOCUS_SETTLEMENT_MANAGER_H

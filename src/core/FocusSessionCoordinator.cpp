@@ -1,4 +1,4 @@
-#include "core/FocusSessionCoordinator.h"
+﻿#include "core/FocusSessionCoordinator.h"
 
 FocusSessionCoordinator::FocusSessionCoordinator(FocusController& controller,
                                                  FocusResultService& results,
@@ -13,12 +13,16 @@ FocusSessionCoordinator::FocusSessionCoordinator(FocusController& controller,
     });
     connect(&controller_, &FocusController::sig_focusFinalized, this,
             [this](uint32_t recordId, uint32_t status) {
-                emit terminalResultReady(recordId, status, results_.applyTerminalRecord(recordId));
+                const auto result = results_.applyTerminalRecord(recordId);
+                if (lastStartRegistrationSucceeded_) emit terminalResultReady(recordId, status, result);
             });
 }
 
 bool FocusSessionCoordinator::start(const StartRequest& request)
 {
+    if (controller_.hasPendingFinalization() || controller_.currentState() == FocusController::State::RUNNING ||
+        controller_.currentState() == FocusController::State::WARNING ||
+        controller_.currentState() == FocusController::State::PAUSED) return false;
     lastStartRegistrationSucceeded_ = true;
     controller_.startFocus(request.plantType, request.plannedMinutes, request.timerMode,
                            request.focusMode, request.tagId, request.allowPause, request.autoExtend);
@@ -36,7 +40,8 @@ void FocusSessionCoordinator::resume()
     controller_.resumeFocus();
 }
 
-void FocusSessionCoordinator::abandon()
+bool FocusSessionCoordinator::abandon()
 {
     controller_.abandonFocus();
+    return !controller_.hasPendingFinalization();
 }

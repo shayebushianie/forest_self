@@ -1,8 +1,10 @@
-#ifndef USERPREFERENCES_H
+﻿#ifndef USERPREFERENCES_H
 #define USERPREFERENCES_H
 
+#include <cstdint>
 #include <QDate>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 class UserPreferences final {
@@ -31,6 +33,9 @@ public:
     static UserPreferences& instance();
 
     void configure(const QString& dataDirectory);
+    void bindAccount(const QString& userDirectory,
+                     uint32_t userId,
+                     const QVector<uint32_t>& knownUserIds);
     bool load();
     QString lastError() const { return lastError_; }
 
@@ -40,22 +45,36 @@ public:
     bool setFocusSetup(const FocusSetup& setup);
     AccessibilityOptions accessibilityOptions() const { return accessibilityOptions_; }
     bool setAccessibilityOptions(const AccessibilityOptions& options);
+    QStringList processBlacklist() const { return processBlacklist_; }
+    bool setProcessBlacklist(const QStringList& processes);
 
     ChallengeRewardState challengeRewardState(const QDate& date, int taskCount, int checkinCount);
     bool saveChallengeRewardState(const ChallengeRewardState& state);
+    QStringList legacyChallengeClaimKeys() const;
+    bool unresolvedLegacyRewards() const { return unresolvedLegacyRewards_; }
+    QString migrationNotice() const { return migrationNotice_; }
 
 private:
     UserPreferences() = default;
-    QString settingsPath() const;
+    QString settingsPath(const QString& directory) const;
+    QString deviceSettingsPath() const;
+    QString accountSettingsPath() const;
     static QString serialize(const QVector<bool>& values);
     static QVector<bool> deserialize(const QString& value, int count);
 
-    QString dataDirectory_;
+    QString deviceDirectory_;
+    QString accountDirectory_;
     QString lastError_;
+    QString migrationNotice_;
+    QVector<uint32_t> knownUserIds_;
+    uint32_t userId_ = 0;
+    bool accountBound_ = false;
+    bool unresolvedLegacyRewards_ = false;
     bool loaded_ = false;
     bool allowPause_ = true;
     FocusSetup focusSetup_;
     AccessibilityOptions accessibilityOptions_;
+    QStringList processBlacklist_;
 };
 
 #endif // USERPREFERENCES_H

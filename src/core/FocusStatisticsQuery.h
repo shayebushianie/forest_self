@@ -1,4 +1,4 @@
-#ifndef FOCUS_STATISTICS_QUERY_H
+﻿#ifndef FOCUS_STATISTICS_QUERY_H
 #define FOCUS_STATISTICS_QUERY_H
 
 #include <QColor>
@@ -41,7 +41,7 @@ public:
 
         friend class FocusStatisticsQuery;
     };
-    struct ProjectSlice { QString name; double ratio = 0.0; QColor color; int totalCount = 0; int successCount = 0; int abandonedCount = 0; };
+    struct ProjectSlice { QString name; double ratio = 0.0; QColor color; int totalCount = 0; int successCount = 0; int abandonedCount = 0; int failedCount = 0; int interruptedCount = 0; uint32_t tagId = 0; };
     struct TreeRank { QString name; int count = 0; uint32_t plantType = 0; };
     struct SessionEvent { qint64 sortKey = 0; QString timeText; QString projectName; QString statusText; QColor color; };
     struct IslandPlant { uint32_t recordId = 0; uint32_t plantType = 0; bool abandoned = false; qreal u = 0.5; qreal v = 0.5; qreal scale = 1.0; uint32_t placementSeed = 0; };
@@ -50,6 +50,9 @@ public:
         int focusCount = 0;
         int successCount = 0;
         int abandonedCount = 0;
+        int failedCount = 0;
+        int interruptedCount = 0;
+        uint64_t totalSeconds = 0;
         int projectCount = 0;
         int growthValue = 0;
         QString topTree;

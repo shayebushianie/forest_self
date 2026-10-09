@@ -58,6 +58,13 @@ struct FocusRecord {
 static_assert(sizeof(FocusRecord) == 64,
               "FocusRecord must be exactly 64 bytes for fixed-length random access");
 
+// Use reserved bytes without changing legacy status values or the record layout.
+inline bool isInterruptedFocus(const FocusRecord& record)
+{
+    return record.status == FocusRecordStatus::Abandoned &&
+           std::memcmp(record.reserved, "INT1", 4) == 0;
+}
+
 // Local account record. Passwords are stored as fixed-size hashes, not raw text.
 #pragma pack(push, 1)
 struct UserRecord {

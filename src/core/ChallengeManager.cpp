@@ -1,4 +1,5 @@
-#include "core/ChallengeManager.h"
+﻿#include "core/ChallengeManager.h"
+#include "core/FocusRecordSemantics.h"
 #include "storage/StorageEnvelope.h"
 
 #include <QBuffer>
@@ -107,23 +108,27 @@ uint32_t ChallengeManager::nextId() const
     return id;
 }
 
-uint32_t ChallengeManager::focusMinutesBetween(uint32_t userId, const QDate& from,
+std::optional<uint32_t> ChallengeManager::focusMinutesBetween(uint32_t userId, const QDate& from,
                                                const QDate& to) const
 {
-    if (userId != m_localUserId || !m_db) return 0;
-    uint32_t totalSeconds = 0;
-    const auto records = m_db->getAllRecords();
+    if (userId != m_localUserId) return 0;
+    if (!m_db) return std::nullopt;
+    uint64_t totalSeconds = 0;
+    std::vector<FocusRecord> records;
+    if (!m_db->getAllRecords(records)) return std::nullopt;
     for (const FocusRecord& record : records) {
         if (record.status != FocusRecordStatus::Success) continue;
-        const QDate date = QDateTime::fromSecsSinceEpoch(record.startTimestamp).date();
+        const QDate date = FocusRecordSemantics::startDate(record);
         if (date >= from && date <= to) totalSeconds += record.actualSeconds;
     }
-    return totalSeconds / 60;
+    return static_cast<uint32_t>(FocusRecordSemantics::wholeMinutes(totalSeconds));
 }
 
 bool ChallengeManager::createChallenge(uint32_t targetUserId, uint32_t targetMinutes,
                                        const QDate& endDate)
 {
+    if (targetUserId == 0 || targetUserId == m_localUserId || targetMinutes == 0 ||
+        !endDate.isValid() || endDate < QDate::currentDate()) return false;
     Challenge challenge;
     challenge.id = nextId();
     challenge.creatorId = m_localUserId;
@@ -144,7 +149,7 @@ bool ChallengeManager::acceptChallenge(uint32_t challengeId)
 {
     for (Challenge& challenge : m_challenges) {
         if (challenge.id != challengeId || challenge.targetId != m_localUserId ||
-            challenge.status != ChallengeStatus::PENDING) continue;
+            challenge.status != ChallengeStatus::PENDING || challenge.endDate < QDate::currentDate()) continue;
         const ChallengeStatus previous = challenge.status;
         challenge.status = ChallengeStatus::ACCEPTED;
         if (save()) return true;
@@ -188,33 +193,50 @@ QVector<Challenge> ChallengeManager::outgoing() const
 QVector<Challenge> ChallengeManager::active() const
 {
     QVector<Challenge> result;
+    active(result);
+    return result;
+}
+
+bool ChallengeManager::active(QVector<Challenge>& result) const
+{
+    uint32_t count = 0;
+    if (!m_db || !m_db->count(count)) return false;
+    QVector<Challenge> loaded;
     for (const Challenge& challenge : m_challenges) {
+        if (challenge.creatorId != m_localUserId && challenge.targetId != m_localUserId) continue;
         if (challenge.status == ChallengeStatus::PENDING || challenge.status == ChallengeStatus::ACCEPTED) {
             Challenge copy = challenge;
-            recalculateProgress(copy);
-            result.append(copy);
+            if (!recalculateProgress(copy)) return false;
+            loaded.append(copy);
         }
     }
-    return result;
+    result = std::move(loaded);
+    return true;
 }
 
 QVector<Challenge> ChallengeManager::history() const
 {
     QVector<Challenge> result;
     for (const Challenge& challenge : m_challenges)
-        if (challenge.status == ChallengeStatus::COMPLETED ||
+        if ((challenge.creatorId == m_localUserId || challenge.targetId == m_localUserId) &&
+            (challenge.status == ChallengeStatus::COMPLETED ||
             challenge.status == ChallengeStatus::REJECTED ||
-            challenge.status == ChallengeStatus::EXPIRED)
+            challenge.status == ChallengeStatus::EXPIRED))
             result.append(challenge);
     return result;
 }
 
-void ChallengeManager::recalculateProgress(Challenge& challenge) const
+bool ChallengeManager::recalculateProgress(Challenge& challenge) const
 {
     const QDate end = challenge.endDate;
     const QDate to = std::min(QDate::currentDate(), end);
-    challenge.creatorProgress = focusMinutesBetween(challenge.creatorId, challenge.startDate, to);
-    challenge.targetProgress = focusMinutesBetween(challenge.targetId, challenge.startDate, to);
+    const auto creator = focusMinutesBetween(challenge.creatorId, challenge.startDate, to);
+    if (!creator) return false;
+    const auto target = focusMinutesBetween(challenge.targetId, challenge.startDate, to);
+    if (!target) return false;
+    challenge.creatorProgress = *creator;
+    challenge.targetProgress = *target;
+    return true;
 }
 
 bool ChallengeManager::refreshProgressAfterFocus()
@@ -223,17 +245,20 @@ bool ChallengeManager::refreshProgressAfterFocus()
     bool changed = false;
     const QDate today = QDate::currentDate();
     for (Challenge& challenge : m_challenges) {
+        if (challenge.creatorId != m_localUserId && challenge.targetId != m_localUserId) continue;
         if (challenge.status != ChallengeStatus::PENDING &&
             challenge.status != ChallengeStatus::ACCEPTED) continue;
 
-        if (today > challenge.endDate) {
-            challenge.status = ChallengeStatus::EXPIRED;
-            changed = true;
-            continue;
+        const auto progress = focusMinutesBetween(m_localUserId, challenge.startDate, std::min(today, challenge.endDate));
+        if (!progress) {
+            m_challenges = previous;
+            return false;
         }
-        if (challenge.status == ChallengeStatus::ACCEPTED &&
-            focusMinutesBetween(m_localUserId, challenge.startDate, today) >= challenge.targetMinutes) {
+        if (challenge.status == ChallengeStatus::ACCEPTED && *progress >= challenge.targetMinutes) {
             challenge.status = ChallengeStatus::COMPLETED;
+            changed = true;
+        } else if (today > challenge.endDate) {
+            challenge.status = ChallengeStatus::EXPIRED;
             changed = true;
         }
     }

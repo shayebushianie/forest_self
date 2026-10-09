@@ -1,4 +1,4 @@
-#ifndef STORAGE_ENVELOPE_H
+﻿#ifndef STORAGE_ENVELOPE_H
 #define STORAGE_ENVELOPE_H
 
 #include <QByteArray>
@@ -27,6 +27,8 @@ struct ReadResult {
 };
 
 ReadResult read(const QString& path, quint32 expectedMagic);
+// Validation only: never repairs the primary or reads a fallback backup.
+ReadResult inspect(const QString& path, quint32 expectedMagic);
 bool write(const QString& path, quint32 magic, quint16 version,
            const QByteArray& payload, QString* error = nullptr);
 

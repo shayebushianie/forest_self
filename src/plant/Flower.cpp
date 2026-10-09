@@ -1,5 +1,7 @@
 ﻿#include "plant/Flower.h"
 
+#include "config/PlantCatalog.h"
+
 void Flower::grow(int actualSeconds, int totalSeconds)
 {
     if (totalSeconds <= 0) return;
@@ -34,7 +36,7 @@ void Flower::wither()
 
 uint32_t Flower::getGrowthStage() const { return growthStage_; }
 
-uint32_t Flower::getPlantType() const { return 2; }
+uint32_t Flower::getPlantType() const { return PlantTypeId::Rose; }
 
 std::string Flower::getStageName() const
 {

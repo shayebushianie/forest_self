@@ -1,4 +1,4 @@
-#ifndef PLANTTIMERWIDGET_H
+﻿#ifndef PLANTTIMERWIDGET_H
 #define PLANTTIMERWIDGET_H
 
 #include <QWidget>
@@ -7,6 +7,9 @@
 #include <QPixmap>
 #include <QString>
 #include <cstdint>
+
+class QFocusEvent;
+class QKeyEvent;
 
 // Custom circular timer control. In setup mode the ring behaves like a minute
 // selector; during focus it becomes a read-only progress display.
@@ -21,6 +24,11 @@ public:
     void setOath(const QString& oath);
     void setPlantType(uint32_t type);
     void setTagInfo(const QString& text, const QColor& color);
+    void setSessionState(bool active, uint32_t growthStage);
+    bool timeSelectorAvailable() const { return selectorVisible(); }
+    QRectF ringBounds() const { return ringRect_; }
+    QRectF tagBounds() const { return tagRect_; }
+    QRectF timeBounds() const { return timeCardRect_; }
 
     uint32_t selectedMinutes() const { return selectedMinutes_; }
     void setSelectedMinutes(uint32_t minutes);
@@ -38,8 +46,15 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void changeEvent(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    bool focusNextPrevChild(bool next) override;
 
 private:
+    enum class FocusArea { None, Tag, Plant, TimeRing };
+
     // Geometry helpers used by both painting and drag-to-select interaction.
     double angleFromPoint(const QPointF& p) const;
     double angleToMinutes(double angleDeg) const;
@@ -47,6 +62,12 @@ private:
     QPointF knobCenter(double angleDeg) const;
     bool isOnKnob(const QPointF& p) const;
     bool selectorVisible() const;
+    int keyboardFocusAreaIndex(FocusArea area) const;
+    int keyboardFocusAreaCount() const;
+    FocusArea keyboardFocusAreaAt(int index) const;
+    void setKeyboardFocusArea(FocusArea area);
+    void normalizeKeyboardFocusArea();
+    void refreshAccessibleText();
 
     // Load (and cache) the pixmap for a given plant type and stage.
     const QPixmap& plantPixmap(uint32_t plantType, uint32_t stage, bool withered);
@@ -58,6 +79,8 @@ private:
     bool isStopwatch_ = false;
     bool isRunning_ = false;
     bool dragging_ = false;
+    uint32_t sessionGrowthStage_ = 0;
+    FocusArea focusArea_ = FocusArea::None;
 
     QString quote_;
     QString oath_;
@@ -65,6 +88,7 @@ private:
     QColor tagColor_ = QColor("#B8B6EA");
     QRectF ringRect_;
     QRectF tagRect_;
+    QRectF timeCardRect_;
     QRectF plantRect_;
     double ringCenterX_ = 0, ringCenterY_ = 0;
     double ringRadius_ = 0;

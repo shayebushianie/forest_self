@@ -1,4 +1,4 @@
-#include "MyForestDialog.h"
+﻿#include "MyForestDialog.h"
 #include "config/PlantCatalog.h"
 #include "storage/DatabaseManager.h"
 #include "common/DatabaseCommon.h"
@@ -225,7 +225,17 @@ MyForestDialog::MyForestDialog(ForestLayoutManager* layout,
     setWindowTitle(QStringLiteral("🌲 我的森林"));
     resize(780, 540);
 
-    m_allRecords = m_db->getAllRecords();
+    if (!m_db->getAllRecords(m_allRecords)) {
+        auto* errorLayout = new QVBoxLayout(this);
+        auto* error = new QLabel(QStringLiteral("无法读取专注记录，本次未加载或修改森林布局。\n%1").arg(m_db->lastError()), this);
+        error->setWordWrap(true);
+        errorLayout->addWidget(error);
+        auto* close = new QPushButton(QStringLiteral("关闭"), this);
+        DialogPresenter::setSecondary(close);
+        connect(close, &QPushButton::clicked, this, &QDialog::reject);
+        errorLayout->addWidget(close);
+        return;
+    }
     m_layout->load();
 
     setupUI();

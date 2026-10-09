@@ -1,4 +1,4 @@
-name: Windows CI
+﻿name: Windows CI
 
 on:
   push:
@@ -7,19 +7,24 @@ on:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    env:
+      FOREST_UI_SAMPLE_CAPTURE: none
     steps:
       - uses: actions/checkout@v4
       - uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.3'
           arch: 'win64_mingw'
-      - uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
+          tools: 'tools_mingw,qt.tools.win64_mingw1120'
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:IQTA_TOOLS 'mingw1120_64/bin/g++.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) { throw 'Matching Qt MinGW compiler is missing.' }
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" "-DCMAKE_CXX_COMPILER=$compiler"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Build
-        run: cmake --build build --config Release
+        run: cmake --build build --config Release --parallel 4
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Package smoke test
@@ -32,6 +37,7 @@ jobs:
           name: forest-qa-${{ github.run_id }}
           if-no-files-found: warn
           path: |
-            build/ui-fullscreen-snapshots/**
+            build/ui-fullscreen-snapshots/manifest.txt
+            build/ui-smoke-results.txt
             build/Testing/Temporary/LastTest.log
             artifacts/**/*.zip

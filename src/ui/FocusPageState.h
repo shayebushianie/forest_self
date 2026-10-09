@@ -1,4 +1,4 @@
-#ifndef FOCUS_PAGE_STATE_H
+﻿#ifndef FOCUS_PAGE_STATE_H
 #define FOCUS_PAGE_STATE_H
 
 #include "core/FocusController.h"
@@ -10,6 +10,7 @@ struct FocusPageState {
     bool paused = false;
     bool active = false;
     bool canPause = false;
+    bool saveFailed = false;
 
     static FocusPageState from(const FocusController& controller)
     {
@@ -17,11 +18,12 @@ struct FocusPageState {
         const auto controllerState = controller.currentState();
         state.running = controllerState == FocusController::State::RUNNING;
         state.paused = controllerState == FocusController::State::PAUSED;
+        state.saveFailed = controller.hasPendingFinalization();
         state.idle = controllerState == FocusController::State::IDLE ||
                      controllerState == FocusController::State::SUCCESS ||
                      controllerState == FocusController::State::FAILED;
         state.active = state.running || state.paused ||
-                       controllerState == FocusController::State::WARNING;
+                       controllerState == FocusController::State::WARNING || state.saveFailed;
         state.canPause = state.running && controller.allowPause() &&
                          controller.timerMode() == FocusController::TimerMode::COUNTDOWN;
         return state;

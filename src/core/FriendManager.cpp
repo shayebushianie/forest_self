@@ -1,4 +1,4 @@
-#include "core/FriendManager.h"
+﻿#include "core/FriendManager.h"
 #include "storage/StorageEnvelope.h"
 #include "storage/UserManager.h"
 
@@ -126,6 +126,19 @@ bool FriendManager::loadFriends()
 {
     const auto result = StorageEnvelope::read(m_friendsFilePath, kFriendsMagic);
     if (result.state == StorageEnvelope::ReadState::Missing) return true;
+    if (result.state == StorageEnvelope::ReadState::Corrupt) {
+        QFile legacy(m_friendsFilePath);
+        if (legacy.open(QIODevice::ReadOnly) && legacy.size() < 14) {
+            QVector<uint32_t> decoded;
+            const auto bytes = legacy.readAll();
+            legacy.close();
+            if (decodeFriends(bytes, decoded)) {
+                m_friendIds = std::move(decoded);
+                return saveFriends();
+            }
+        }
+        return false;
+    }
     QByteArray bytes;
     if (result.state == StorageEnvelope::ReadState::Legacy) {
         QFile file(m_friendsFilePath);
@@ -158,8 +171,30 @@ QVector<FriendInfo> FriendManager::allUsers() const
 
 bool FriendManager::sendRequest(uint32_t toUserId)
 {
-    if (toUserId == m_myUserId || m_friendIds.contains(toUserId) ||
-        findRequestIndex(m_myUserId, toUserId) >= 0) return false;
+    if (toUserId == m_myUserId || isFriend(toUserId)) return false;
+    bool targetExists = false;
+    for (const auto& user : m_userMgr.getAllUsers()) {
+        if (user.first == toUserId) { targetExists = true; break; }
+    }
+    if (!targetExists) return false;
+    for (const FriendRequest& request : m_requests) {
+        if (request.status == 0 &&
+            ((request.fromUserId == m_myUserId && request.toUserId == toUserId) ||
+             (request.fromUserId == toUserId && request.toUserId == m_myUserId))) return false;
+    }
+
+    const int requestIndex = findRequestIndex(m_myUserId, toUserId);
+    if (requestIndex >= 0) {
+        FriendRequest& request = m_requests[requestIndex];
+        if (request.status != 2) return false;
+        const FriendRequest previous = request;
+        request.timestamp = QDateTime::currentSecsSinceEpoch();
+        request.status = 0;
+        if (saveRequests()) return true;
+        request = previous;
+        return false;
+    }
+
     m_requests.append({m_myUserId, toUserId, QDateTime::currentSecsSinceEpoch(), 0});
     if (saveRequests()) return true;
     m_requests.removeLast();
@@ -187,19 +222,11 @@ bool FriendManager::acceptRequest(uint32_t fromUserId)
     const int requestIndex = findRequestIndex(fromUserId, m_myUserId);
     if (requestIndex < 0 || m_requests[requestIndex].status != 0) return false;
     const uint8_t oldStatus = m_requests[requestIndex].status;
+    // The shared accepted-request record defines this relationship for both accounts.
     m_requests[requestIndex].status = 1;
     if (!saveRequests()) {
         m_requests[requestIndex].status = oldStatus;
         return false;
-    }
-    if (!m_friendIds.contains(fromUserId)) {
-        m_friendIds.append(fromUserId);
-        if (!saveFriends()) {
-            m_friendIds.removeLast();
-            m_requests[requestIndex].status = oldStatus;
-            saveRequests();
-            return false;
-        }
     }
     return true;
 }
@@ -219,14 +246,20 @@ QVector<FriendInfo> FriendManager::friends() const
 {
     QVector<FriendInfo> result;
     for (const auto& [id, name] : m_userMgr.getAllUsers()) {
-        if (m_friendIds.contains(id)) result.append({id, QString::fromStdString(name)});
+        if (isFriend(id)) result.append({id, QString::fromStdString(name)});
     }
     return result;
 }
 
 bool FriendManager::isFriend(uint32_t userId) const
 {
-    return m_friendIds.contains(userId);
+    if (m_friendIds.contains(userId)) return true;
+    for (const FriendRequest& request : m_requests) {
+        if (request.status == 1 &&
+            ((request.fromUserId == m_myUserId && request.toUserId == userId) ||
+             (request.fromUserId == userId && request.toUserId == m_myUserId))) return true;
+    }
+    return false;
 }
 
 int FriendManager::pendingCount() const

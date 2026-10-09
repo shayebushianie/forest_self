@@ -1,4 +1,4 @@
-#include "ui/StoreDialog.h"
+﻿#include "ui/StoreDialog.h"
 #include "config/PlantCatalog.h"
 #include "core/CoinManager.h"
 #include "ui/PlantImageUtils.h"
@@ -105,15 +105,21 @@ void StoreDialog::rebuildItems()
         } else {
             buyButton->setText(QStringLiteral("&#x1FA99; %1").arg(plant.storeCost));
             QObject::connect(buyButton, &QPushButton::clicked, this,
-                             [this, cost = plant.storeCost, type = plant.type]() {
-                if (coinManager_.spend(cost)) {
-                    coinManager_.unlockPlant(type);
+                             [this, type = plant.type]() {
+                const auto result = coinManager_.purchasePlant(type);
+                if (result == CoinManager::OperationResult::Applied) {
                     DialogPresenter::information(this, QStringLiteral("解锁成功"),
                                              QStringLiteral("新植物已解锁。"));
                     rebuildItems();
-                } else {
+                } else if (result == CoinManager::OperationResult::InsufficientFunds) {
                     DialogPresenter::warning(this, QStringLiteral("余额不足"),
                                          QStringLiteral("请先完成专注任务赚取金币。"));
+                } else if (result == CoinManager::OperationResult::AlreadyApplied) {
+                    DialogPresenter::information(this, QStringLiteral("已拥有"), QStringLiteral("该植物已解锁。"));
+                    rebuildItems();
+                } else {
+                    DialogPresenter::warning(this, QStringLiteral("购买未完成"),
+                        QStringLiteral("购买未能保存，金币和植物状态均未改变。"));
                 }
             });
         }

@@ -1,4 +1,4 @@
-#ifndef CHALLENGEMANAGER_H
+﻿#ifndef CHALLENGEMANAGER_H
 #define CHALLENGEMANAGER_H
 
 #include <QString>
@@ -48,10 +48,11 @@ public:
     QVector<Challenge> incoming() const;   // challenges targeting local user
     QVector<Challenge> outgoing() const;   // challenges created by local user
     QVector<Challenge> active() const;     // accepted and not expired
+    bool active(QVector<Challenge>& result) const;
     QVector<Challenge> history() const;    // completed/expired
 
     uint32_t localUserId() const { return m_localUserId; }
-    void recalculateProgress(Challenge& c) const;
+    bool recalculateProgress(Challenge& c) const;
     bool refreshProgressAfterFocus();
 
 private:
@@ -60,7 +61,7 @@ private:
     uint32_t m_localUserId;
     QVector<Challenge> m_challenges;
     uint32_t nextId() const;
-    uint32_t focusMinutesBetween(uint32_t userId, const QDate& from, const QDate& to) const;
+    std::optional<uint32_t> focusMinutesBetween(uint32_t userId, const QDate& from, const QDate& to) const;
 };
 
 #endif

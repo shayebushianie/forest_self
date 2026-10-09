@@ -1,0 +1,19 @@
+﻿#pragma once
+
+#include <string_view>
+
+#ifndef FOREST_BUILD_CONFIGURATION
+#define FOREST_BUILD_CONFIGURATION "unknown"
+#endif
+
+namespace ForestBuild {
+inline constexpr std::string_view sourceDirectory =
+    R"forest_source(@FOREST_SOURCE_DIRECTORY@)forest_source";
+inline constexpr std::string_view revision = R"forest(@FOREST_REVISION@)forest";
+inline constexpr std::string_view sourceFingerprint = R"forest(@FOREST_SOURCE_FINGERPRINT@)forest";
+inline constexpr std::string_view configuredUtc = R"forest(@FOREST_CONFIGURED_UTC@)forest";
+inline constexpr std::string_view appVersion = R"forest(@FOREST_APP_VERSION@)forest";
+inline constexpr std::string_view qtVersion = R"forest(@FOREST_QT_VERSION@)forest";
+inline constexpr std::string_view compiler = R"forest(@FOREST_COMPILER@)forest";
+inline constexpr std::string_view buildConfiguration = FOREST_BUILD_CONFIGURATION;
+}

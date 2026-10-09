@@ -1,5 +1,7 @@
 ﻿#include "plant/OakTree.h"
 
+#include "config/PlantCatalog.h"
+
 void OakTree::grow(int actualSeconds, int totalSeconds)
 {
     if (totalSeconds <= 0) return;
@@ -22,4 +24,4 @@ void OakTree::grow(int actualSeconds, int totalSeconds)
     }
 }
 
-std::string OakTree::getPlantName() const { return "OakTree"; }
+std::string OakTree::getPlantName() const { return PlantCatalog::byType(getPlantType()).internalName.toStdString(); }

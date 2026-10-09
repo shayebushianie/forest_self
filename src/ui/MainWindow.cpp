@@ -1,4 +1,4 @@
-#include "ui/MainWindow.h"
+﻿#include "ui/MainWindow.h"
 #include "ui/CommercePages.h"
 #include "ui/DashboardPageHost.h"
 #include "ui/SocialPages.h"
@@ -17,6 +17,7 @@
 #include "core/QuoteProvider.h"
 #include "core/AchievementEngine.h"
 #include "core/FocusResultService.h"
+#include "core/FocusRecordSemantics.h"
 #include "core/DashboardSnapshotService.h"
 #include "config/PlantCatalog.h"
 #include "core/GachaManager.h"
@@ -52,7 +53,6 @@
 #include <QScrollArea>
 #include <QRadioButton>
 #include <QFontMetrics>
-#include <QGroupBox>
 #include <QCheckBox>
 #include <utility>
 #include <QGridLayout>
@@ -60,11 +60,12 @@
 #include <QFrame>
 #include <QPixmap>
 #include <QPainter>
+#include <QPainterPath>
+#include <QRegion>
 #include <QImage>
 #include <QColor>
 #include <QScreen>
 #include <QEvent>
-#include <QFileDialog>
 #include <QFormLayout>
 #include <QDesktopServices>
 #include <QUrl>
@@ -75,11 +76,13 @@
 #include <QShortcut>
 #include <QKeySequence>
 #include <QAction>
+#include <QTimer>
 #include <functional>
 #include <limits>
 #include "config/UserPreferences.h"
 #include "storage/BackupService.h"
 #include "common/PathConfig.h"
+#include "utils/Logger.h"
 
 namespace {
 
@@ -93,35 +96,28 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing, true);
 
         QRectF bounds = rect().adjusted(1, 1, -1, -1);
-        QColor textColor("#185442");
-        QColor borderColor(255, 255, 255, 215);
-        QLinearGradient fill(bounds.topLeft(), bounds.bottomLeft());
-        fill.setColorAt(0.0, QColor("#83DFC3"));
-        fill.setColorAt(1.0, QColor("#5FC9AE"));
+        QColor textColor = AppStyle::color(AppStyle::Color::Surface);
+        QColor borderColor = AppStyle::color(AppStyle::Color::Primary);
+        QColor fill = borderColor;
 
         if (!isEnabled()) {
-            fill.setColorAt(0.0, QColor(99, 170, 148, 125));
-            fill.setColorAt(1.0, QColor(76, 147, 126, 125));
-            textColor = QColor(247, 255, 247, 115);
-            borderColor = QColor(255, 255, 255, 70);
+            fill = QColor("#DFE8E3");
+            textColor = AppStyle::color(AppStyle::Color::Muted);
+            borderColor = AppStyle::color(AppStyle::Color::Border);
         } else if (isDown()) {
-            fill.setColorAt(0.0, QColor("#69C6AA"));
-            fill.setColorAt(1.0, QColor("#52B99C"));
+            fill = AppStyle::color(AppStyle::Color::PrimaryPressed);
         } else if (underMouse()) {
-            fill.setColorAt(0.0, QColor("#A0E9D0"));
-            fill.setColorAt(1.0, QColor("#76D8BC"));
+            fill = AppStyle::color(AppStyle::Color::PrimaryHover);
         }
 
         painter.setPen(QPen(borderColor, 1));
         painter.setBrush(fill);
-        painter.drawRoundedRect(bounds, bounds.height() / 2.0, bounds.height() / 2.0);
+        painter.drawRoundedRect(bounds, 8, 8);
 
         if (hasFocus()) {
-            painter.setPen(QPen(QColor("#F2F4C6"), 2));
+            painter.setPen(QPen(AppStyle::color(AppStyle::Color::Selection), 2));
             painter.setBrush(Qt::NoBrush);
-            painter.drawRoundedRect(bounds.adjusted(4, 4, -4, -4),
-                                    (bounds.height() - 8) / 2.0,
-                                    (bounds.height() - 8) / 2.0);
+            painter.drawRoundedRect(bounds.adjusted(4, 4, -4, -4), 5, 5);
         }
 
         painter.setFont(font());
@@ -148,6 +144,7 @@ MainWindow::MainWindow(FocusController& controller,
       ruleEngine_(ruleEngine), coinManager_(coinManager),
       quotes_(quotes), db_(db), achievements_(achievements), focusResults_(focusResults),
       dashboardSnapshots_(dashboardSnapshots),
+      featureServices_(featureServices),
       m_gacha(featureServices.gacha()),
       m_forestLayout(featureServices.forestLayout()),
       m_friendMgr(featureServices.friends()),
@@ -184,37 +181,81 @@ MainWindow::MainWindow(FocusController& controller,
     QObject::connect(forestDashboard_, &ForestDashboardWidget::focusRecordRequested,
                      this, [this](uint32_t recordId) {
         const auto record = db_.readById(recordId);
-        if (!record) return;
+        if (!record) {
+            DialogPresenter::error(this, QStringLiteral("专注记录读取失败"), db_.lastError().isEmpty()
+                ? QStringLiteral("这条记录暂不可用，请重新进入森林后重试。") : db_.lastError());
+            return;
+        }
         const FocusRecord& focus = record.value();
         const QString plantName = PlantCatalog::isKnown(focus.plantType)
             ? PlantCatalog::byType(focus.plantType).displayName : QStringLiteral("未知植物");
         const int tagIndex = settingsTagCombo_ ? settingsTagCombo_->findData(focus.tagId) : -1;
         const QString tagName = tagIndex >= 0 ? settingsTagCombo_->itemText(tagIndex)
                                                : QStringLiteral("无标签");
-        const QString state = focus.status == FocusRecordStatus::Success
-            ? QStringLiteral("成功完成") : QStringLiteral("主动放弃");
+        const QString state = FocusRecordSemantics::statusText(focus);
         const QString started = QDateTime::fromSecsSinceEpoch(
             static_cast<qint64>(focus.startTimestamp), Qt::LocalTime).toString(QStringLiteral("yyyy年M月d日 HH:mm"));
         QDialog detail(this);
         detail.setWindowTitle(QStringLiteral("专注记录"));
         DialogPresenter::prepare(detail);
-        detail.setMinimumWidth(380);
+        detail.setObjectName("forestRecordDetailDialog");
+        detail.setStyleSheet(detail.styleSheet().replace(QStringLiteral("#forestDialog"),
+            QStringLiteral("#forestRecordDetailDialog")) + QStringLiteral(
+            "QDialog#forestRecordDetailDialog { background:#FFFFFF; border:1px solid #D5DFDA; border-radius:20px; }"));
+        detail.setFixedWidth(520);
         auto* layout = new QVBoxLayout(&detail);
         layout->setContentsMargins(28, 24, 28, 22);
+        layout->setSpacing(14);
         auto* title = new QLabel(QStringLiteral("专注记录"), &detail);
         title->setStyleSheet("font-size:20px; font-weight:800; color:#245543;");
-        auto* content = new QLabel(QStringLiteral("%1\n%2\n时长：%3 分钟\n项目：%4\n植物：%5\n状态：%6\n奖励：🪙 %7")
+        auto* details = new QHBoxLayout;
+        details->setSpacing(18);
+        auto* plant = new QLabel(&detail);
+        plant->setObjectName("forestRecordDetailPlant");
+        plant->setFixedSize(84, 88);
+        plant->setAlignment(Qt::AlignCenter);
+        plant->setAccessibleName(plantName);
+        if (PlantCatalog::isKnown(focus.plantType)) {
+            QPixmap plantIcon = PlantImageUtils::loadPlantIcon(
+                PlantCatalog::byType(focus.plantType).iconPath);
+            if (focus.status != FocusRecordStatus::Success && !plantIcon.isNull()) {
+                QImage image = plantIcon.toImage().convertToFormat(QImage::Format_ARGB32);
+                for (int y = 0; y < image.height(); ++y) {
+                    auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+                    for (int x = 0; x < image.width(); ++x) {
+                        const int gray = qGray(pixels[x]);
+                        pixels[x] = qRgba(gray, gray, gray, qAlpha(pixels[x]));
+                    }
+                }
+                plantIcon = QPixmap::fromImage(image);
+            }
+            plant->setPixmap(plantIcon.scaled(plant->size(), Qt::KeepAspectRatio,
+                                               Qt::SmoothTransformation));
+        } else {
+            plant->hide();
+        }
+        auto* content = new QLabel(QStringLiteral("%1\n%2\n有效时长：%3\n项目：%4\n植物：%5\n状态：%6\n奖励：🪙 %7")
             .arg(started)
             .arg(focus.focusMode == PersistedFocusMode::Deep ? QStringLiteral("深度专注") : QStringLiteral("专注"))
-            .arg((focus.actualSeconds + 59) / 60).arg(tagName).arg(plantName).arg(state).arg(focus.coinsEarned), &detail);
+            .arg(QStringLiteral("%1 分 %2 秒").arg(focus.actualSeconds / 60).arg(focus.actualSeconds % 60))
+            .arg(tagName).arg(plantName).arg(state).arg(focus.coinsEarned), &detail);
+        content->setObjectName("forestRecordDetailContent");
         content->setWordWrap(true);
+        content->setTextFormat(Qt::PlainText);
         content->setStyleSheet("font-size:14px; color:#48675B;");
         auto* close = new QPushButton(QStringLiteral("关闭"), &detail);
-        close->setObjectName("btnSecondary");
+        DialogPresenter::setSecondary(close);
+        close->setDefault(true);
         layout->addWidget(title);
-        layout->addWidget(content);
+        details->addWidget(plant, 0, Qt::AlignTop);
+        details->addWidget(content, 1);
+        layout->addLayout(details);
         layout->addWidget(close, 0, Qt::AlignRight);
         QObject::connect(close, &QPushButton::clicked, &detail, &QDialog::accept);
+        detail.adjustSize();
+        QPainterPath detailShape;
+        detailShape.addRoundedRect(QRectF(detail.rect()), 20, 20);
+        detail.setMask(QRegion(detailShape.toFillPolygon().toPolygon()));
         detail.exec();
     });
     QObject::connect(forestDashboard_, &ForestDashboardWidget::filtersRequested,
@@ -222,13 +263,32 @@ MainWindow::MainWindow(FocusController& controller,
         QDialog dialog(this);
         dialog.setWindowTitle(QStringLiteral("筛选森林记录"));
         DialogPresenter::prepare(dialog);
-        dialog.setMinimumWidth(360);
+        dialog.setObjectName("forestRecordFilterDialog");
+        dialog.setFixedWidth(520);
+        dialog.setStyleSheet(dialog.styleSheet().replace(QStringLiteral("#forestDialog"),
+            QStringLiteral("#forestRecordFilterDialog")) + QStringLiteral(
+            "QDialog#forestRecordFilterDialog { background:#FFFFFF; border:1px solid #D5DFDA; border-radius:20px; }"
+            "QCheckBox { color:#48675B; background:transparent; border:none; }"
+            "QDateEdit, QComboBox { color:#203C35; background:#FFFFFF; border:1px solid #D5DFDA; border-radius:6px; min-height:30px; padding:0 8px; }"
+            "QDateEdit:disabled { color:#71857A; background:#EAF0EA; }"
+            "QDateEdit:focus, QComboBox:focus { border:2px solid #246B57; }"));
         auto* layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(28, 24, 28, 22);
+        layout->setSpacing(18);
+        auto* title = new QLabel(QStringLiteral("筛选森林记录"), &dialog);
+        title->setObjectName("forestRecordFilterTitle");
+        title->setWordWrap(true);
+        title->setStyleSheet("font-size:20px; font-weight:800; color:#245543;");
         auto* form = new QFormLayout;
+        form->setContentsMargins(0, 0, 0, 0);
+        form->setHorizontalSpacing(16);
+        form->setVerticalSpacing(14);
         const auto current = forestDashboard_->recordFilter();
 
         auto* dateEnabled = new QCheckBox(QStringLiteral("指定日期"), &dialog);
+        dateEnabled->setObjectName("forestRecordFilterDateEnabled");
         auto* dateEdit = new QDateEdit(current.date.isValid() ? current.date : QDate::currentDate(), &dialog);
+        dateEdit->setObjectName("forestRecordFilterDate");
         dateEdit->setCalendarPopup(true);
         dateEnabled->setChecked(current.date.isValid());
         dateEdit->setEnabled(dateEnabled->isChecked());
@@ -246,6 +306,7 @@ MainWindow::MainWindow(FocusController& controller,
         tagFilter->setCurrentIndex(tagIndex >= 0 ? tagIndex : 0);
 
         auto* plantFilter = new QComboBox(&dialog);
+        plantFilter->setObjectName("forestRecordFilterPlant");
         plantFilter->addItem(QStringLiteral("全部植物"), QVariant::fromValue<qulonglong>(std::numeric_limits<uint32_t>::max()));
         for (const PlantDefinition& plant : PlantCatalog::all()) {
             plantFilter->addItem(plant.displayName, plant.type);
@@ -255,9 +316,13 @@ MainWindow::MainWindow(FocusController& controller,
         plantFilter->setCurrentIndex(plantIndex >= 0 ? plantIndex : 0);
 
         auto* statusFilter = new QComboBox(&dialog);
+        statusFilter->setObjectName("forestRecordFilterStatus");
         statusFilter->addItem(QStringLiteral("全部状态"), -1);
         statusFilter->addItem(QStringLiteral("成功完成"), 0);
-        statusFilter->addItem(QStringLiteral("主动放弃"), 1);
+        statusFilter->addItem(QStringLiteral("放弃"), 1);
+        statusFilter->setToolTip(QStringLiteral("旧记录未保存中断原因时保留为放弃，不猜测其原因；新中断恢复记录单独分类。"));
+        statusFilter->addItem(QStringLiteral("规则失败"), 2);
+        statusFilter->addItem(QStringLiteral("中断恢复"), 3);
         const int statusIndex = statusFilter->findData(current.terminalState);
         statusFilter->setCurrentIndex(statusIndex >= 0 ? statusIndex : 0);
 
@@ -265,11 +330,23 @@ MainWindow::MainWindow(FocusController& controller,
         form->addRow(QStringLiteral("项目标签:"), tagFilter);
         form->addRow(QStringLiteral("植物:"), plantFilter);
         form->addRow(QStringLiteral("状态:"), statusFilter);
+        layout->addWidget(title);
         layout->addLayout(form);
         auto* actions = new QHBoxLayout;
+        actions->setSpacing(8);
         auto* reset = new QPushButton(QStringLiteral("清除筛选"), &dialog);
+        reset->setProperty("testId", "forestRecordFilterReset");
         auto* cancel = new QPushButton(QStringLiteral("取消"), &dialog);
+        cancel->setProperty("testId", "forestRecordFilterCancel");
         auto* apply = new QPushButton(QStringLiteral("应用"), &dialog);
+        apply->setProperty("testId", "forestRecordFilterApply");
+        DialogPresenter::setSecondary(reset);
+        DialogPresenter::setSecondary(cancel);
+        DialogPresenter::setPrimary(apply);
+        cancel->setDefault(true);
+        cancel->setAutoDefault(false);
+        reset->setAutoDefault(false);
+        apply->setAutoDefault(false);
         actions->addWidget(reset);
         actions->addStretch();
         actions->addWidget(cancel);
@@ -290,6 +367,10 @@ MainWindow::MainWindow(FocusController& controller,
             forestDashboard_->setRecordFilter(filter);
             dialog.accept();
         });
+        dialog.adjustSize();
+        QPainterPath filterShape;
+        filterShape.addRoundedRect(QRectF(dialog.rect()), 20, 20);
+        dialog.setMask(QRegion(filterShape.toFillPolygon().toPolygon()));
         dialog.exec();
     });
     QObject::connect(forestDashboard_, &ForestDashboardWidget::overviewRequested,
@@ -299,29 +380,32 @@ MainWindow::MainWindow(FocusController& controller,
         dialog.setWindowTitle(QStringLiteral("总览筛选"));
         DialogPresenter::prepare(dialog);
         dialog.setObjectName("forestOverviewDialog");
-        dialog.setFixedWidth(640);
-        dialog.setStyleSheet(
+        dialog.setFixedWidth(720);
+        dialog.setStyleSheet(dialog.styleSheet().replace(QStringLiteral("#forestDialog"),
+                                                        QStringLiteral("#forestOverviewDialog")) + QStringLiteral(
             "QDialog#forestOverviewDialog {"
-            " background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #E8F6C9,stop:1 #BCE9C5);"
-            " border:2px solid #3F9670; border-radius:24px; }"
-            "QLabel#forestOverviewLeaf { background:#F4D96E; border:2px solid #D4AD42; border-radius:22px;"
-            " color:#315747; font-size:21px; }"
-            "QLabel#forestOverviewTitle { color:#245543; font-size:22px; font-weight:900; }"
-            "QLabel#forestOverviewDescription { color:#4C735E; font-size:13px; }"
-            "QWidget#forestOverviewTagCard { background:rgba(255,255,255,188);"
-            " border:1px solid rgba(63,150,112,125); border-radius:16px; }"
+            " background:#FFFFFF; border:1px solid #D5DFDA; border-radius:20px; }"
+            "QLabel { background:transparent; border:none; }"
+            "QDialog#forestOverviewDialog QLabel#forestOverviewLeaf { background:#EFF5F2; border-radius:8px; color:#246B57; font-size:21px; }"
+            "QDialog#forestOverviewDialog QLabel#forestOverviewTitle { color:#203C35; font-size:22px; font-weight:800; }"
+            "QDialog#forestOverviewDialog QLabel#forestOverviewDescription { color:#53665F; font-size:14px; }"
+            "QWidget#forestOverviewTagCard { background:transparent; border:none; }"
+            "QWidget#forestOverviewAddRow { background:transparent; border:none; }"
             "QLabel#forestOverviewTagLabel { color:#315747; font-size:14px; font-weight:800; }"
             "QScrollArea#forestOverviewTagScroll { background:transparent; border:none; }"
             "QScrollArea#forestOverviewTagScroll > QWidget > QWidget { background:transparent; }"
-            "QLineEdit#forestOverviewAddInput { background:#FFFDEB; border:1px solid #8FC486;"
-            " border-radius:10px; color:#245543; padding:7px 10px; }"
-            "QPushButton#forestOverviewAddTag { background:#E9ECEA; border:1px dashed #9DB9A5;"
-            " border-radius:16px; color:#526A5D; font-size:26px; font-weight:500; }"
-            "QPushButton#forestOverviewAddTag:hover { background:#FFFFFF; border-color:#3E9A6F; color:#245543; }");
+            "QLineEdit#forestOverviewAddInput { background:#F5F7F8; border:1px solid #D5DFDA;"
+            " border-radius:8px; color:#203C35; padding:7px 10px; selection-background-color:#C9F0DE; selection-color:#203C35; }"
+            "QLineEdit#forestOverviewAddInput:focus { border:2px solid #246B57; padding:6px 9px; }"
+            "QDialog#forestOverviewDialog QPushButton#forestOverviewAddTag { background:#E9ECEA; border:1px dashed #9DB9A5;"
+            " border-radius:16px; color:#526A5D; font-size:26px; font-weight:500; padding:0; min-height:0; }"
+            "QDialog#forestOverviewDialog QPushButton#forestOverviewAddTag:hover { background:#FFFFFF; border-color:#3E9A6F; color:#245543; }"
+            "QDialog#forestOverviewDialog QPushButton#forestOverviewAddTag:focus { border:2px solid #3E9A6F; }"
+            "QDialog#forestOverviewDialog QPushButton#forestOverviewAddTag:pressed { background:#D5E9DD; }"));
 
         auto* layout = new QVBoxLayout(&dialog);
         layout->setContentsMargins(28, 26, 28, 24);
-        layout->setSpacing(16);
+        layout->setSpacing(20);
         auto* titleRow = new QHBoxLayout;
         titleRow->setSpacing(12);
         auto* leaf = new QLabel(QString::fromUtf8(u8"🌿"), &dialog);
@@ -341,8 +425,8 @@ MainWindow::MainWindow(FocusController& controller,
         auto* tagCard = new QWidget(&dialog);
         tagCard->setObjectName("forestOverviewTagCard");
         auto* tagLayout = new QVBoxLayout(tagCard);
-        tagLayout->setContentsMargins(16, 14, 16, 16);
-        tagLayout->setSpacing(8);
+        tagLayout->setContentsMargins(0, 0, 0, 0);
+        tagLayout->setSpacing(12);
         auto* tagLabel = new QLabel(QStringLiteral("项目标签"), tagCard);
         tagLabel->setObjectName("forestOverviewTagLabel");
         const auto current = forestDashboard_->recordFilter();
@@ -354,20 +438,30 @@ MainWindow::MainWindow(FocusController& controller,
         tagScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         tagScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         auto* tagOptions = new QWidget(tagScroll);
-        tagOptions->setStyleSheet("background:transparent; border:none;");
+        tagOptions->setObjectName("forestOverviewTagOptions");
+        tagOptions->setStyleSheet("QWidget#forestOverviewTagOptions { background:transparent; border:none; }");
         auto* tagOptionsLayout = new QGridLayout(tagOptions);
         tagOptionsLayout->setContentsMargins(0, 0, 0, 0);
         tagOptionsLayout->setHorizontalSpacing(10);
         tagOptionsLayout->setVerticalSpacing(10);
         for (int column = 0; column < 4; ++column) tagOptionsLayout->setColumnStretch(column, 1);
+        QFont chipFont = tagOptions->font();
+        chipFont.setPixelSize(14);
+        chipFont.setWeight(QFont::ExtraBold);
+        chipFont = AppStyle::scaledFont(chipFont);
+        const int chipHeight = qMax(44, QFontMetrics(chipFont).height() + 20);
         int tagOptionCount = 0;
         const auto addTagOption = [&](uint32_t tagId, const QString& name, const QColor& color) {
-            auto* option = new QRadioButton(name, tagOptions);
+            auto* option = new QRadioButton(
+                QFontMetrics(chipFont).elidedText(name, Qt::ElideRight, 98), tagOptions);
+            option->setFont(chipFont);
             option->setObjectName("forestOverviewTagOption");
             option->setProperty("tagId", QVariant::fromValue<qulonglong>(tagId));
             option->setChecked(tagId == selectedTagId);
             option->setCursor(Qt::PointingHandCursor);
-            option->setFixedHeight(44);
+            option->setFocusPolicy(Qt::StrongFocus);
+            option->setFixedHeight(chipHeight);
+            option->setAccessibleName(name);
             option->setToolTip(name);
             option->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
             option->setStyleSheet(QStringLiteral(
@@ -375,6 +469,7 @@ MainWindow::MainWindow(FocusController& controller,
                 " color:#3B5348; font-size:14px; font-weight:800; padding:8px 12px; }"
                 "QRadioButton:hover { background:#F7FAF5; border-color:%1; }"
                 "QRadioButton:checked { background:#FFFFFF; border-color:#FFFFFF; color:#245543; }"
+                "QRadioButton:focus { border-color:#3F9670; }"
                 "QRadioButton::indicator { width:14px; height:14px; border-radius:7px;"
                 " background:%1; border:1px solid rgba(36,85,67,30); margin-right:10px; }"
                 "QRadioButton::indicator:checked { border:2px solid %1; }").arg(color.name()));
@@ -397,8 +492,11 @@ MainWindow::MainWindow(FocusController& controller,
         addTagButton->setObjectName("forestOverviewAddTag");
         addTagButton->setProperty("testId", "forestOverviewAddTag");
         addTagButton->setToolTip(QStringLiteral("新增项目标签"));
+        addTagButton->setFocusPolicy(Qt::StrongFocus);
+        addTagButton->setAutoDefault(false);
         addTagButton->setCursor(Qt::PointingHandCursor);
-        addTagButton->setFixedHeight(44);
+        addTagButton->setFixedHeight(chipHeight);
+        addTagButton->setAccessibleName(QStringLiteral("新增项目标签"));
         addTagButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         const auto refreshTagGrid = [&]() {
             tagOptionsLayout->removeWidget(addTagButton);
@@ -408,63 +506,77 @@ MainWindow::MainWindow(FocusController& controller,
             const int allRows = (totalChips + 3) / 4;
             tagScroll->setVerticalScrollBarPolicy(
                 totalChips > 16 ? Qt::ScrollBarAsNeeded : Qt::ScrollBarAlwaysOff);
-            tagScroll->setFixedHeight(visibleRows * 44 + qMax(0, visibleRows - 1) * 10 + 2);
-            tagOptions->setMinimumHeight(allRows * 44 + qMax(0, allRows - 1) * 10 + 2);
+            tagScroll->setFixedHeight(visibleRows * chipHeight + qMax(0, visibleRows - 1) * 10 + 2);
+            tagOptions->setMinimumHeight(allRows * chipHeight + qMax(0, allRows - 1) * 10 + 2);
         };
         refreshTagGrid();
         tagScroll->setWidget(tagOptions);
 
         auto* addRow = new QWidget(tagCard);
+        addRow->setObjectName("forestOverviewAddRow");
         auto* addRowLayout = new QHBoxLayout(addRow);
         addRowLayout->setContentsMargins(0, 0, 0, 0);
         addRowLayout->setSpacing(8);
         auto* addInput = new QLineEdit(addRow);
         addInput->setObjectName("forestOverviewAddInput");
         addInput->setPlaceholderText(QStringLiteral("输入新标签名称"));
+        addInput->setMinimumHeight(40);
         auto* addConfirm = new QPushButton(QStringLiteral("添加"), addRow);
         addConfirm->setProperty("testId", "forestOverviewAddConfirm");
         DialogPresenter::setPrimary(addConfirm);
+        addConfirm->setMinimumHeight(40);
+        addConfirm->setAutoDefault(false);
+        QWidget::setTabOrder(addInput, addConfirm);
         addRowLayout->addWidget(addInput, 1);
         addRowLayout->addWidget(addConfirm);
         addRow->hide();
 
-        QObject::connect(addTagButton, &QPushButton::clicked, &dialog, [addRow, addInput]() {
+        const auto updateOverviewShape = [&dialog]() {
+            dialog.adjustSize();
+            QPainterPath shape;
+            shape.addRoundedRect(QRectF(dialog.rect()), 20, 20);
+            dialog.setMask(QRegion(shape.toFillPolygon().toPolygon()));
+        };
+        QObject::connect(addTagButton, &QPushButton::clicked, &dialog, [addRow, addInput, updateOverviewShape]() {
             addRow->show();
+            updateOverviewShape();
             addInput->setFocus();
         });
+        QObject::connect(addInput, &QLineEdit::returnPressed, addConfirm, &QPushButton::click);
         QObject::connect(addConfirm, &QPushButton::clicked, &dialog,
-                         [this, &selectedTagId, addInput, addRow, addTagOption, refreshTagGrid]() {
+                         [this, &selectedTagId, addInput, addRow, tagScroll, addTagOption, refreshTagGrid, updateOverviewShape]() {
             if (!m_tagMgr) return;
-            const QString name = addInput->text().trimmed();
-            if (name.isEmpty()) {
+            const auto result = m_tagMgr->addAndSave(addInput->text());
+            if (result.status == TagManager::AddStatus::EmptyName) {
                 DialogPresenter::warning(this, QStringLiteral("标签名称为空"),
                                          QStringLiteral("请输入一个项目标签名称。"));
                 return;
             }
-            for (const TagDef& tag : m_tagMgr->all()) {
-                if (tag.name.compare(name, Qt::CaseInsensitive) == 0) {
-                    DialogPresenter::warning(this, QStringLiteral("标签已存在"),
-                                             QStringLiteral("请使用一个不同的项目标签名称。"));
-                    return;
-                }
+            if (result.status == TagManager::AddStatus::DuplicateName) {
+                DialogPresenter::warning(this, QStringLiteral("标签已存在"),
+                                         QStringLiteral("请使用一个不同的项目标签名称。"));
+                return;
             }
-            const QStringList palette = {QStringLiteral("#A8C76A"), QStringLiteral("#F8BF56"),
-                                         QStringLiteral("#59C8C4"), QStringLiteral("#B8A8E7"),
-                                         QStringLiteral("#F08A7C"), QStringLiteral("#78A9E3")};
-            const QString color = palette.at(m_tagMgr->count() % palette.size());
-            const uint32_t tagId = m_tagMgr->add(name, color);
-            if (!m_tagMgr->save()) {
-                m_tagMgr->remove(tagId);
+            if (result.status == TagManager::AddStatus::LimitReached) {
+                DialogPresenter::warning(this, QStringLiteral("无法添加标签"),
+                                         QStringLiteral("当前标签数量或编号已达到可保存范围。"));
+                return;
+            }
+            if (result.status == TagManager::AddStatus::SaveFailed) {
                 DialogPresenter::error(this, QStringLiteral("保存标签失败"),
                                        QStringLiteral("新标签未能安全保存，请稍后重试。"));
                 return;
             }
-            selectedTagId = tagId;
-            addTagOption(tagId, name, QColor(color))->setChecked(true);
+            selectedTagId = result.tag.id;
+            auto* addedOption = addTagOption(result.tag.id, result.tag.name, QColor(result.tag.color));
+            addedOption->setChecked(true);
             refreshTagGrid();
             refreshTagOptions();
             addInput->clear();
             addRow->hide();
+            updateOverviewShape();
+            tagScroll->ensureWidgetVisible(addedOption);
+            addedOption->setFocus(Qt::OtherFocusReason);
         });
         tagLayout->addWidget(tagLabel);
         tagLayout->addWidget(tagScroll);
@@ -478,6 +590,15 @@ MainWindow::MainWindow(FocusController& controller,
         DialogPresenter::setSecondary(clear);
         DialogPresenter::setSecondary(cancel);
         DialogPresenter::setPrimary(apply);
+        cancel->setDefault(false);
+        cancel->setAutoDefault(false);
+        clear->setAutoDefault(false);
+        apply->setAutoDefault(false);
+        clear->setToolTip(QStringLiteral("显示全部项目标签的记录。"));
+        for (auto* button : {clear, cancel, apply}) button->setMinimumHeight(40);
+        QWidget::setTabOrder(addConfirm, clear);
+        QWidget::setTabOrder(clear, cancel);
+        QWidget::setTabOrder(cancel, apply);
         actions->addWidget(clear);
         actions->addStretch();
         actions->addWidget(cancel);
@@ -501,9 +622,13 @@ MainWindow::MainWindow(FocusController& controller,
             forestDashboard_->setRecordFilter(filter);
             dialog.accept();
         });
+        updateOverviewShape();
+        cancel->setFocus(Qt::OtherFocusReason);
         dialog.exec();
     });
+    challengeRewards_ = std::make_unique<ChallengeRewardService>(coinManager_);
     challengeDashboard_ = new ChallengeDashboardWidget;
+    challengeDashboard_->setRewardService(challengeRewards_.get());
     QObject::connect(challengeDashboard_, &ChallengeDashboardWidget::openFocusRequested,
                      this, [this]() { switchPage(0); });
     QObject::connect(challengeDashboard_, &ChallengeDashboardWidget::openShopRequested,
@@ -515,34 +640,30 @@ MainWindow::MainWindow(FocusController& controller,
         DialogPresenter::detail(this, QStringLiteral("成长值规则"),
             QStringLiteral("成长值根据专注时长、完成次数和挑战进度动态计算，用于表现森林成长。"));
     });
-    QObject::connect(challengeDashboard_, &ChallengeDashboardWidget::rewardCoinsRequested,
-                     this, [this](int amount) {
-        if (amount > 0) {
-            coinManager_.earn(static_cast<uint32_t>(amount));
-            refreshChallengePage();
-        }
+    QObject::connect(challengeDashboard_, &ChallengeDashboardWidget::rewardsChanged,
+                     this, [this](int) {
+        refreshChallengePage();
     });
 
     // ========== Page 0: 专注主页 ==========
     auto* page0 = new QWidget;
     page0->setObjectName("focusPage");
-    page0->setStyleSheet(
-        "QWidget#focusPage {"
-        " background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-        " stop:0 #3E967A, stop:0.48 #58B195, stop:1 #75C7B3);"
-        "}");
+    page0->setStyleSheet(QStringLiteral("QWidget#focusPage { background:%1; }")
+        .arg(AppStyle::color(AppStyle::Color::Workspace).name()));
     auto* p0Layout = new QVBoxLayout(page0);
-    p0Layout->setContentsMargins(28, 72, 28, 22);
+    p0Layout->setContentsMargins(28, 24, 28, 24);
     p0Layout->setSpacing(0);
 
     auto* focusContent = new QWidget(page0);
     focusContent->setObjectName("focusContent");
     focusContent->setMinimumWidth(620);
     focusContent->setMaximumWidth(980);
+    focusContent->setMaximumHeight(980);
     focusContent->setStyleSheet("QWidget#focusContent { background:transparent; border:none; }");
     auto* focusPageLayout = new QVBoxLayout(focusContent);
     focusPageLayout->setContentsMargins(0, 0, 0, 0);
-    focusPageLayout->setSpacing(14);
+    focusPageLayout->setSpacing(12);
+    focusPageLayout->setAlignment(Qt::AlignTop);
     p0Layout->addWidget(focusContent, 1, Qt::AlignHCenter);
 
     auto* statusLayout = new QHBoxLayout;
@@ -551,66 +672,48 @@ MainWindow::MainWindow(FocusController& controller,
 
     auto* modeSwitch = new QWidget(page0);
     modeSwitch->setObjectName("focusModeSwitch");
-    modeSwitch->setStyleSheet(
-        "QWidget#focusModeSwitch { background:rgba(255,255,255,24);"
-        " border:1px solid rgba(255,255,255,48); border-radius:22px; }"
-        "QLabel[modeTitle=\"true\"] { color:rgba(247,255,247,125); font-size:19px;"
-        " font-weight:900; background:transparent; border:none; padding:0 12px; }"
-        "QLabel[modeTitle=\"true\"][active=\"true\"] { color:#F7FFF7; }");
+    modeSwitch->setFixedHeight(48);
+    modeSwitch->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    modeSwitch->setStyleSheet(QStringLiteral(
+        "QWidget#focusModeSwitch { background:%1; border:1px solid %2; border-radius:8px; }"
+        "QPushButton[mode=\"true\"] { background:transparent; border:1px solid transparent;"
+        " border-radius:6px; color:%3; font-size:15px; font-weight:600; padding:0; min-height:0; }"
+        "QPushButton[mode=\"true\"]:hover { background:%4; }"
+        "QPushButton[mode=\"true\"][active=\"true\"] { background:%4; color:%5; }"
+        "QPushButton[mode=\"true\"]:focus { border:2px solid %6; }"
+        "QPushButton[mode=\"true\"]:disabled { color:%3; background:%1; }")
+        .arg(AppStyle::color(AppStyle::Color::Surface).name(), AppStyle::color(AppStyle::Color::Border).name(),
+             AppStyle::color(AppStyle::Color::Muted).name(), AppStyle::color(AppStyle::Color::Selection).name(),
+             AppStyle::color(AppStyle::Color::Text).name(), AppStyle::color(AppStyle::Color::Primary).name()));
     auto* modeSwitchLayout = new QHBoxLayout(modeSwitch);
-    modeSwitchLayout->setContentsMargins(0, 0, 0, 0);
-    modeSwitchLayout->setSpacing(14);
-    homeCountdownModeLabel_ = new QLabel(QStringLiteral("倒计时"), modeSwitch);
-    homeStopwatchModeLabel_ = new QLabel(QStringLiteral("正计时"), modeSwitch);
-    homeCountdownModeLabel_->setProperty("modeTitle", "true");
-    homeStopwatchModeLabel_->setProperty("modeTitle", "true");
-    homeCountdownModeLabel_->setAlignment(Qt::AlignCenter);
-    homeStopwatchModeLabel_->setAlignment(Qt::AlignCenter);
-    homeCountdownModeLabel_->setCursor(Qt::PointingHandCursor);
-    homeStopwatchModeLabel_->setCursor(Qt::PointingHandCursor);
-    homeCountdownModeLabel_->installEventFilter(this);
-    homeStopwatchModeLabel_->installEventFilter(this);
-
-    auto* modePill = new QWidget(modeSwitch);
-    modePill->setObjectName("topModePill");
-    modePill->setStyleSheet(
-        "QWidget#topModePill { background:transparent; border:none; }"
-        "QPushButton[mode=\"true\"] { background:transparent; border:none;"
-        " border-radius:20px; color:rgba(247,255,247,135); font-size:25px;"
-        " font-weight:900; padding:0; }"
-        "QPushButton[mode=\"true\"]:hover { background-color:rgba(255,255,255,22); color:#FFFFFF; }"
-        "QPushButton[mode=\"true\"][active=\"true\"] { background:transparent;"
-        " border:none; color:#F7FFF7; }");
-    modePill->setFixedHeight(42);
-    auto* topModeLayout = new QHBoxLayout(modePill);
-    topModeLayout->setContentsMargins(5, 5, 5, 5);
-    topModeLayout->setSpacing(0);
-    homeCountdownBtn_ = new QPushButton(QString::fromUtf8(u8"⌛"), modePill);
-    homeStopwatchBtn_ = new QPushButton(QString::fromUtf8(u8"⏱"), modePill);
+    modeSwitchLayout->setContentsMargins(4, 4, 4, 4);
+    modeSwitchLayout->setSpacing(4);
+    homeCountdownBtn_ = new QPushButton(QIcon(":/icons/hourglass.png"), QStringLiteral("倒计时"), modeSwitch);
+    homeStopwatchBtn_ = new QPushButton(QIcon(":/icons/timer.png"), QStringLiteral("正计时"), modeSwitch);
+    homeCountdownBtn_->setObjectName("focusCountdownMode");
+    homeStopwatchBtn_->setObjectName("focusStopwatchMode");
+    homeCountdownBtn_->setIconSize(QSize(20, 20));
+    homeStopwatchBtn_->setIconSize(QSize(20, 20));
     homeCountdownBtn_->setProperty("mode", "true");
     homeStopwatchBtn_->setProperty("mode", "true");
-    const QString modeButtonStyle = QStringLiteral(
-        "QPushButton { background:transparent; border:none; border-radius:16px; }"
-        "QPushButton:hover { background-color:rgba(255,255,255,22); }");
-    homeCountdownBtn_->setStyleSheet(modeButtonStyle);
-    homeStopwatchBtn_->setStyleSheet(modeButtonStyle);
     homeCountdownBtn_->setToolTip(QStringLiteral("倒计时"));
     homeStopwatchBtn_->setToolTip(QStringLiteral("正计时"));
+    homeCountdownBtn_->setAccessibleName(QStringLiteral("倒计时"));
+    homeStopwatchBtn_->setAccessibleName(QStringLiteral("正计时"));
     homeCountdownBtn_->setCursor(Qt::PointingHandCursor);
     homeStopwatchBtn_->setCursor(Qt::PointingHandCursor);
-    homeCountdownBtn_->setFixedSize(52, 32);
-    homeStopwatchBtn_->setFixedSize(52, 32);
-    topModeLayout->addWidget(homeCountdownBtn_);
-    topModeLayout->addWidget(homeStopwatchBtn_);
-    modeSwitchLayout->addWidget(homeCountdownModeLabel_);
-    modeSwitchLayout->addWidget(modePill);
-    modeSwitchLayout->addWidget(homeStopwatchModeLabel_);
+    homeCountdownBtn_->setFixedSize(136, 38);
+    homeStopwatchBtn_->setFixedSize(136, 38);
+    modeSwitchLayout->addWidget(homeCountdownBtn_);
+    modeSwitchLayout->addWidget(homeStopwatchBtn_);
 
     coinLabel_ = new QLabel(page0);
+    coinLabel_->setObjectName("focusCoinBalance");
+    coinLabel_->setFixedHeight(44);
     coinLabel_->setAlignment(Qt::AlignCenter);
-    coinLabel_->setStyleSheet(
-        "background-color:rgba(28,96,72,94); border:1px solid rgba(255,255,255,42);"
-        "border-radius:16px; padding:8px 16px; color:#F7FFF7; font-weight:800;");
+    coinLabel_->setStyleSheet(QStringLiteral("background:transparent; border:none;"
+        " padding:0 8px; color:%1; font-size:14px; font-weight:600;")
+        .arg(AppStyle::color(AppStyle::Color::Muted).name()));
     coinLabel_->setText(QStringLiteral("🪙 %1").arg(coinManager_.balance()));
     coinLabel_->setMinimumWidth(86);
 
@@ -625,18 +728,20 @@ MainWindow::MainWindow(FocusController& controller,
     focusPageLayout->addLayout(statusLayout);
 
     auto* focusHint = new QLabel(QString::fromUtf8(u8"开始种树吧!"), page0);
+    focusHint_ = focusHint;
+    focusHint->setObjectName("focusHint");
+    focusHint->setFixedHeight(36);
     focusHint->setAlignment(Qt::AlignCenter);
-    focusHint->setStyleSheet(
-        "font-size:15px; font-weight:800; color:#F8FFE9;"
-        "padding:9px 20px; background:rgba(255,255,255,24);"
-        "border:1px solid rgba(255,255,255,46); border-radius:15px;");
+    focusHint->setStyleSheet(QStringLiteral("font-size:15px; font-weight:600; color:%1;"
+        " padding:4px 20px; background:transparent; border:none;")
+        .arg(AppStyle::color(AppStyle::Color::Muted).name()));
     auto* focusHintLayout = new QHBoxLayout;
     focusHintLayout->setContentsMargins(0, 0, 0, 0);
     focusHintLayout->addStretch();
     focusHintLayout->addWidget(focusHint);
     focusHintLayout->addStretch();
     focusPageLayout->addLayout(focusHintLayout);
-    timerRing_->setMaximumHeight(720);
+    timerRing_->setMaximumHeight(700);
     focusPageLayout->addWidget(timerRing_, 1);
 
     homeModeOverlay_ = new QWidget(centralWidget());
@@ -654,19 +759,21 @@ MainWindow::MainWindow(FocusController& controller,
     auto* modePanel = homeModePanel_;
     modePanel->setObjectName("homeModePanel");
     modePanel->setStyleSheet(
-        "QWidget#homeModePanel { background-color:rgba(109,181,156,232);"
-        " border:1px solid rgba(255,255,255,95); border-radius:8px; }"
+        "QWidget#homeModePanel { background-color:#FFFFFF;"
+        " border:1px solid #D5DFDA; border-radius:8px; }"
         "QWidget[optionRow=\"true\"] { background:transparent; border:none; }"
         "QLabel[optionIcon=\"true\"] { color:rgba(247,255,247,220); font-size:24px;"
         " background:transparent; border:none; }"
-        "QLabel[optionTitle=\"true\"] { color:#F7FFF7; font-size:16px; font-weight:900;"
+        "QLabel[optionTitle=\"true\"] { color:#203C35; font-size:16px; font-weight:600;"
         " background:transparent; border:none; }"
-        "QLabel[optionDesc=\"true\"] { color:rgba(247,255,247,185); font-size:13px;"
+        "QLabel[optionDesc=\"true\"] { color:#53665F; font-size:13px;"
         " background:transparent; border:none; }"
-        "QCheckBox { background:transparent; color:#F7FFF7; font-weight:700; spacing:8px; }"
+        "QCheckBox { background:transparent; color:#203C35; font-weight:600; spacing:8px; }"
         "QCheckBox::indicator { width:36px; height:20px; border-radius:10px;"
-        " background-color:rgba(43,108,84,72); border:1px solid rgba(255,255,255,70); }"
-        "QCheckBox::indicator:checked { background-color:#F2F4C6; border-color:#F7FFF7; }");
+        " background-color:#E3EAE6; border:1px solid #A9CDBE; }"
+        "QCheckBox::indicator:checked { background-color:#246B57; border-color:#246B57; }"
+        "QCheckBox::indicator:disabled { background:#E3EAE6; border-color:#CCD8D1; }"
+        "QCheckBox:focus { border:1px solid #246B57; }");
     modePanel->setMinimumWidth(560);
     modePanel->setMaximumWidth(900);
     overlayLayout->addWidget(modePanel, 0, Qt::AlignHCenter);
@@ -717,7 +824,13 @@ MainWindow::MainWindow(FocusController& controller,
 
         auto* check = new QCheckBox(row);
         check->setCursor(Qt::PointingHandCursor);
-        check->setFixedWidth(54);
+        check->setFixedWidth(90);
+        check->setAccessibleName(title);
+        check->setToolTip(title);
+        check->setText(QStringLiteral("关"));
+        QObject::connect(check, &QCheckBox::toggled, check, [check](bool checked) {
+            check->setText(checked ? QStringLiteral("开") : QStringLiteral("关"));
+        });
 
         rowLayout->addWidget(iconLabel);
         rowLayout->addWidget(textWrap, 1);
@@ -735,7 +848,7 @@ MainWindow::MainWindow(FocusController& controller,
         countdownOptionsWidget_,
         QString::fromUtf8(u8"🔥"),
         QStringLiteral("深度专注"),
-        QStringLiteral("只能使用白名单中的软件"),
+        QStringLiteral("使用黑名单应用时有十秒返回宽限"),
         &homeDeepFocusCheck_);
     auto* groupPlantRow = makeOptionRow(
         countdownOptionsWidget_,
@@ -766,17 +879,17 @@ MainWindow::MainWindow(FocusController& controller,
     pauseBreakOverlay_->setObjectName("pauseBreakOverlay");
     pauseBreakOverlay_->setStyleSheet(
         "QWidget#pauseBreakOverlay { background-color:rgba(0,0,0,118); border:none; }"
-        "QFrame#pauseBreakPanel { background-color:rgba(109,181,156,238);"
-        " border:1px solid rgba(255,255,255,110); border-radius:14px; }"
-        "QLabel#pauseBreakTitle { color:#F7FFF7; font-size:20px; font-weight:900;"
+        "QFrame#pauseBreakPanel { background-color:#FFFFFF;"
+        " border:1px solid #D5DFDA; border-radius:14px; }"
+        "QLabel#pauseBreakTitle { color:#203C35; font-size:20px; font-weight:600;"
         " background:transparent; border:none; }"
-        "QLabel#pauseBreakTime { color:#F2F4C6; font-size:52px; font-weight:300;"
+        "QLabel#pauseBreakTime { color:#203C35; font-size:52px; font-weight:300;"
         " background:transparent; border:none; }"
-        "QPushButton#pauseBreakContinue { background-color:#F2F4C6; color:#2B6C54;"
-        " border:1px solid rgba(255,255,255,130); border-radius:10px;"
-        " padding:10px 34px; font-weight:900; font-size:15px; }"
-        "QPushButton#pauseBreakContinue:hover { background-color:#F7FFF7; }"
-        "QPushButton#pauseBreakContinue:pressed { background-color:#D7DCA5; }");
+        "QPushButton#pauseBreakContinue { background-color:#246B57; color:#FFFFFF;"
+        " border:1px solid #246B57; border-radius:8px;"
+        " padding:10px 34px; font-weight:600; font-size:15px; }"
+        "QPushButton#pauseBreakContinue:hover { background-color:#1D5948; }"
+        "QPushButton#pauseBreakContinue:pressed { background-color:#174838; }");
     pauseBreakOverlay_->hide();
     pauseBreakOverlay_->installEventFilter(this);
     auto* pauseOverlayLayout = new QVBoxLayout(pauseBreakOverlay_);
@@ -806,17 +919,13 @@ MainWindow::MainWindow(FocusController& controller,
     QObject::connect(pauseBreakContinueBtn_, &QPushButton::clicked,
                      this, &MainWindow::resumeFromPauseBreak);
     QObject::connect(&pauseBreakTimer_, &QTimer::timeout, this, [this]() {
+        controller_.tick();
         if (controller_.currentState() != FocusController::State::PAUSED) {
             hidePauseBreakOverlay();
             return;
         }
-        if (pauseBreakRemainingSeconds_ > 0) {
-            --pauseBreakRemainingSeconds_;
-        }
+        pauseBreakRemainingSeconds_ = static_cast<int>(controller_.pauseRemainingSeconds());
         updatePauseBreakText();
-        if (pauseBreakRemainingSeconds_ <= 0) {
-            resumeFromPauseBreak();
-        }
     });
 
     auto* btnLayout = new QHBoxLayout;
@@ -830,6 +939,9 @@ MainWindow::MainWindow(FocusController& controller,
     abandonBtn_ = new QPushButton(QStringLiteral("放弃"));
     abandonBtn_->setObjectName("btnDangerAction");
     abandonBtn_->setProperty("testId", "focusAbandonButton");
+    startBtn_->setToolTip(QStringLiteral("应用内快捷键：Ctrl+Alt+F（不是全局热键）"));
+    pauseBtn_->setToolTip(QStringLiteral("应用内快捷键：Ctrl+Alt+P（不是全局热键）"));
+    abandonBtn_->setToolTip(QStringLiteral("应用内快捷键：Ctrl+Alt+A（不是全局热键）"));
     pauseBtn_->setEnabled(false);
     abandonBtn_->setEnabled(false);
     pauseBtn_->setVisible(false);
@@ -837,8 +949,10 @@ MainWindow::MainWindow(FocusController& controller,
     startBtn_->setCursor(Qt::PointingHandCursor);
     pauseBtn_->setCursor(Qt::PointingHandCursor);
     abandonBtn_->setCursor(Qt::PointingHandCursor);
-    startBtn_->setMinimumSize(294, 64);
-    startBtn_->setFont(QFont("Microsoft YaHei", 22, QFont::Normal));
+    startBtn_->setFixedSize(256, 52);
+    startBtn_->setFont(QFont("Microsoft YaHei", 14, QFont::DemiBold));
+    startBtn_->setStyleSheet(
+        "QPushButton#btnPrimary { padding:0; border-width:2px; min-height:48px; font-size:18px; }");
     pauseBtn_->setMinimumSize(128, 42);
     abandonBtn_->setMinimumSize(128, 42);
     pauseBtn_->setStyleSheet(
@@ -853,7 +967,7 @@ MainWindow::MainWindow(FocusController& controller,
         " color:#FFF7F7; font-weight:900; }"
         "QPushButton#btnDangerAction:hover { background-color:#E76561; border-color:#FFD0CC; }"
         "QPushButton#btnDangerAction:pressed { background-color:#B83E3A; }");
-    btnLayout->setContentsMargins(0, 42, 0, 0);
+    btnLayout->setContentsMargins(0, 18, 0, 0);
     btnLayout->setSpacing(12);
     btnLayout->addStretch();
     btnLayout->addWidget(startBtn_);
@@ -868,14 +982,12 @@ MainWindow::MainWindow(FocusController& controller,
     auto* page1 = new QWidget;
     page1->setObjectName("forestPage");
     page1->setStyleSheet(
-        "QWidget#forestPage {"
-        " background: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-        " stop:0 #2F7B62, stop:0.35 #64BCA3, stop:1 #90CEE3);"
-        "}");
+        "QWidget#forestPage { background:#F5F7F8; }");
     auto* p1Layout = new QVBoxLayout(page1);
     p1Layout->setContentsMargins(0, 0, 0, 0);
 
     auto* forestScroll = new QScrollArea(page1);
+    forestScroll->setObjectName("forestScroll");
     forestScroll->setWidgetResizable(true);
     forestScroll->setFrameShape(QFrame::NoFrame);
     forestScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -884,6 +996,7 @@ MainWindow::MainWindow(FocusController& controller,
         "QScrollArea { background:transparent; border:none; }"
         "QScrollArea > QWidget > QWidget { background:transparent; }");
     forestDashboard_->setParent(forestScroll);
+    forestDashboard_->setMinimumHeight(860);
     forestScroll->setWidget(forestDashboard_);
     p1Layout->addWidget(forestScroll);
 
@@ -896,28 +1009,88 @@ MainWindow::MainWindow(FocusController& controller,
     auto* page5 = new QWidget;
     page5->setObjectName("settingsPage");
     page5->setStyleSheet(
-        "QWidget#settingsPage {"
-        " background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-        " stop:0 #58AD8F, stop:0.65 #4FA286, stop:1 #4A907B);"
-        "}");
+        "QWidget#settingsPage { background:#F5F7F8; }"
+        "QWidget#settingsBody, QStackedWidget#settingsCategoryStack,"
+        " QScrollArea#settingsSectionScroll, QWidget#settingsSectionViewport,"
+        " QWidget#focusSettingsContent, QWidget#rulesSettingsContent,"
+        " QWidget#appearanceSettingsContent, QWidget#dataSettingsContent, QWidget#settingsSectionIntro {"
+        " background:transparent; border:none; }"
+        "QListWidget#settingsCategoryNav { background:transparent; border:none; padding:4px; }"
+        "QListWidget#settingsCategoryNav::item { color:#53665F; padding:12px; margin:3px 0; }"
+        "QListWidget#settingsCategoryNav::item:hover { background:#EAF0ED; color:#203C35; }"
+        "QListWidget#settingsCategoryNav::item:selected { background:#C9F0DE; color:#203C35; }"
+        "QWidget#settingsPage QWidget[settingRow=\"true\"] { background:transparent;"
+        " border:none; border-bottom:1px solid #D5DFDA; border-radius:0; }"
+        "QWidget#settingsPage QLabel { color:#285E4E; background:transparent; border:none; }"
+        "QWidget#settingsPage QLabel[settingTitle=\"true\"] { font-size:16px; font-weight:700; }"
+        "QWidget#settingsPage QLabel[settingDescription=\"true\"] { color:#52746A; font-size:14px; }"
+        "QWidget#settingsPage QWidget#settingsDataActions, QWidget#settingsPage QWidget#settingsRuleEditor,"
+        " QWidget#settingsPage QWidget#settingsRestoreSection { background:transparent; border:none; }"
+        "QWidget#settingsPage QComboBox, QWidget#settingsPage QSpinBox,"
+        " QWidget#settingsPage QLineEdit { color:#203C35; background:#FFFFFF;"
+        " border:1px solid #D5DFDA; border-radius:6px; min-height:34px; padding:4px 10px; }"
+        "QWidget#settingsPage QComboBox:focus, QWidget#settingsPage QSpinBox:focus,"
+        " QWidget#settingsPage QLineEdit:focus { border:2px solid #287C61; }"
+        "QWidget#settingsPage QComboBox:disabled, QWidget#settingsPage QSpinBox:disabled {"
+        " color:#637B72; background:#E3EAE6; border-color:#CCD8D1; }"
+        "QWidget#settingsPage QCheckBox { color:#285E4E; background:transparent;"
+        " border:none; spacing:10px; padding:6px; }"
+        "QWidget#settingsPage QCheckBox:focus { outline:none; border:1px solid #287C61; }"
+        "QWidget#settingsPage QCheckBox::indicator { width:18px; height:18px;"
+        " border:1px solid #487968; background:#F8FCF9; }"
+        "QWidget#settingsPage QCheckBox::indicator:checked { background:#2F805B; border-color:#245543; }"
+        "QWidget#settingsPage QListWidget#processBlacklist { background:#FFFFFF;"
+        " color:#203C35; border:1px solid #D5DFDA; border-radius:6px; }"
+        "QWidget#settingsPage QListWidget#processBlacklist::item { padding:10px; }"
+        "QWidget#settingsPage QListWidget#processBlacklist::item:selected {"
+        " color:#174D3C; background:#C6E5D6; }"
+        "QWidget#settingsPage QPushButton#processBlacklistAdd { background:#246B57;"
+        " color:#FFFFFF; border:1px solid #246B57; }"
+        "QWidget#settingsPage QPushButton#processBlacklistRemove { background:#B34E49;"
+        " color:#FFFFFF; border:1px solid #B34E49; }"
+        "QWidget#settingsPage QPushButton#processBlacklistAdd:hover { background:#1D5948; }"
+        "QWidget#settingsPage QPushButton#processBlacklistRemove:hover { background:#983E3A; }"
+        "QWidget#settingsPage QPushButton#processBlacklistAdd:pressed { background:#174838; }"
+        "QWidget#settingsPage QPushButton#processBlacklistRemove:pressed { background:#803531; }"
+        "QWidget#settingsPage QPushButton#processBlacklistAdd:focus,"
+        " QWidget#settingsPage QPushButton#processBlacklistRemove:focus { border:2px solid #203C35; }"
+        "QWidget#settingsPage QPushButton#processBlacklistRemove:disabled {"
+        " background:#E3EAE6; color:#637B72; border:1px solid #CCD8D1; }"
+        "QWidget#settingsPage QPushButton:disabled { background:#E3EAE6; color:#637B72;"
+        " border:1px solid #CCD8D1; }"
+        "QWidget#settingsPage QPushButton#btnPrimary { background:#246B57; color:#FFFFFF; border:1px solid #246B57; }"
+        "QWidget#settingsPage QPushButton#btnPrimary:hover { background:#1D5948; }"
+        "QWidget#settingsPage QPushButton#btnPrimary:pressed { background:#174838; }"
+        "QWidget#settingsPage QPushButton#btnSecondary { background:#FFFFFF; color:#203C35; border:1px solid #D5DFDA; }"
+        "QWidget#settingsPage QPushButton#btnSecondary:hover { background:#EAF0ED; }"
+        "QWidget#settingsPage QPushButton#btnSecondary:pressed { background:#C9F0DE; }"
+        "QWidget#settingsPage QPushButton#btnDanger { background:#B34E49; color:#FFFFFF; border:1px solid #B34E49; }"
+        "QWidget#settingsPage QPushButton#btnDanger:hover { background:#983E3A; }"
+        "QWidget#settingsPage QPushButton#btnDanger:pressed { background:#803531; }"
+        "QWidget#settingsPage QPushButton:focus { border:2px solid #203C35; }"
+        "QWidget#settingsPage QWidget#settingsSectionIntro QLabel[settingTitle=\"true\"] {"
+        " font-size:22px; color:#203C35; }");
     auto* p5Layout = new QVBoxLayout(page5);
-    p5Layout->setContentsMargins(20, 20, 20, 20);
-    p5Layout->setSpacing(8);
+    p5Layout->setContentsMargins(28, 24, 28, 24);
+    p5Layout->setSpacing(20);
 
     auto* setTitle = new QLabel(QStringLiteral("系统设置"), page5);
-    setTitle->setStyleSheet("font-size:18px; font-weight:bold; color:#F7FFF7; background:transparent; border:none;");
-    setTitle->setAlignment(Qt::AlignCenter);
+    setTitle->setStyleSheet("font-size:26px; font-weight:bold; color:#285E4E; background:transparent; border:none;");
+    setTitle->setFixedHeight(44);
+    setTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     p5Layout->addWidget(setTitle);
 
     auto* settingsBody = new QWidget(page5);
     settingsBody->setObjectName("settingsBody");
     auto* settingsBodyLayout = new QHBoxLayout(settingsBody);
     settingsBodyLayout->setContentsMargins(0, 0, 0, 0);
-    settingsBodyLayout->setSpacing(16);
+    settingsBodyLayout->setSpacing(24);
 
     auto* settingsNav = new QListWidget(settingsBody);
     settingsNav->setObjectName("settingsCategoryNav");
-    settingsNav->setFixedWidth(172);
+    settingsNav->setFixedWidth(196);
+    settingsNav->setFixedHeight(284);
+    settingsNav->setAccessibleName(QStringLiteral("设置分类"));
     settingsNav->addItem(QStringLiteral("专注设置"));
     settingsNav->addItem(QStringLiteral("监督规则"));
     settingsNav->addItem(QStringLiteral("外观与无障碍"));
@@ -928,14 +1101,17 @@ MainWindow::MainWindow(FocusController& controller,
     settingsStack->setObjectName("settingsCategoryStack");
     const auto createSettingsSection = [settingsStack](const QString& objectName) {
         auto* scroll = new QScrollArea(settingsStack);
+        scroll->setObjectName("settingsSectionScroll");
+        scroll->viewport()->setObjectName("settingsSectionViewport");
         scroll->setWidgetResizable(true);
         scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        scroll->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setAlignment(Qt::AlignLeft | Qt::AlignTop);
         auto* content = new QWidget(scroll);
         content->setObjectName(objectName);
-        content->setMaximumWidth(1120);
+        content->setMaximumWidth(920);
         auto* layout = new QVBoxLayout(content);
-        layout->setContentsMargins(8, 4, 8, 12);
+        layout->setContentsMargins(0, 0, 12, 16);
         layout->setSpacing(12);
         scroll->setWidget(content);
         settingsStack->addWidget(scroll);
@@ -946,19 +1122,19 @@ MainWindow::MainWindow(FocusController& controller,
     auto* appearanceSettingsLayout = createSettingsSection(QStringLiteral("appearanceSettingsContent"));
     auto* dataSettingsLayout = createSettingsSection(QStringLiteral("dataSettingsContent"));
     const auto addSectionIntro = [](QVBoxLayout* layout, const QString& title, const QString& description) {
-        auto* card = new QWidget;
-        card->setProperty("uiCard", true);
-        auto* cardLayout = new QVBoxLayout(card);
-        cardLayout->setContentsMargins(18, 14, 18, 14);
-        cardLayout->setSpacing(4);
-        auto* titleLabel = new QLabel(title, card);
+        auto* intro = new QWidget;
+        intro->setObjectName("settingsSectionIntro");
+        auto* cardLayout = new QVBoxLayout(intro);
+        cardLayout->setContentsMargins(0, 0, 0, 10);
+        cardLayout->setSpacing(8);
+        auto* titleLabel = new QLabel(title, intro);
         titleLabel->setProperty("settingTitle", true);
-        auto* descriptionLabel = new QLabel(description, card);
+        auto* descriptionLabel = new QLabel(description, intro);
         descriptionLabel->setProperty("settingDescription", true);
         descriptionLabel->setWordWrap(true);
         cardLayout->addWidget(titleLabel);
         cardLayout->addWidget(descriptionLabel);
-        layout->addWidget(card);
+        layout->addWidget(intro);
     };
     addSectionIntro(focusSettingsLayout, QStringLiteral("专注设置"),
                     QStringLiteral("设置下一次专注的植物、标签、时长与计时行为。"));
@@ -971,54 +1147,67 @@ MainWindow::MainWindow(FocusController& controller,
     auto* s3Layout = focusSettingsLayout;
     QObject::connect(settingsNav, &QListWidget::currentRowChanged, settingsStack,
                      &QStackedWidget::setCurrentIndex);
-    settingsBodyLayout->addWidget(settingsNav);
+    settingsBodyLayout->addWidget(settingsNav, 0, Qt::AlignTop);
     settingsBodyLayout->addWidget(settingsStack, 1);
     p5Layout->addWidget(settingsBody, 1);
 
-    auto* plantGroup = new QGroupBox(QStringLiteral("植物选择"));
-    auto* plantLayout = new QHBoxLayout(plantGroup);
+    const auto addSettingRow = [](QVBoxLayout* layout, const QString& title,
+                                 const QString& description, QWidget* control) {
+        auto* row = new QWidget;
+        row->setProperty("settingRow", true);
+        auto* rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(18, 14, 18, 14);
+        rowLayout->setSpacing(20);
+        auto* copy = new QVBoxLayout;
+        copy->setSpacing(6);
+        auto* heading = new QLabel(title, row);
+        heading->setProperty("settingTitle", true);
+        heading->setWordWrap(true);
+        auto* detail = new QLabel(description, row);
+        detail->setProperty("settingDescription", true);
+        detail->setWordWrap(true);
+        copy->addWidget(heading);
+        copy->addWidget(detail);
+        rowLayout->addLayout(copy, 1);
+        control->setFixedWidth(240);
+        control->setAccessibleName(title);
+        if (auto* check = qobject_cast<QCheckBox*>(control)) {
+            const QString label = check->text();
+            const auto updateState = [check, label](bool checked) {
+                check->setText(label + (checked ? QStringLiteral("（开）") : QStringLiteral("（关）")));
+            };
+            updateState(check->isChecked());
+            QObject::connect(check, &QCheckBox::toggled, check, updateState);
+        }
+        rowLayout->addWidget(control);
+        layout->addWidget(row);
+    };
     settingsPlantCombo_ = new QComboBox;
     settingsPlantCombo_->setObjectName("focusPlantSelector");
     refreshPlantCombo();
-    plantLayout->addWidget(new QLabel(QStringLiteral("选择植物:")));
-    plantLayout->addWidget(settingsPlantCombo_);
-    s3Layout->addWidget(plantGroup);
+    addSettingRow(s3Layout, QStringLiteral("植物选择"), QStringLiteral("下一次专注使用的已解锁植物。"), settingsPlantCombo_);
 
-    auto* modeGroup = new QGroupBox(QStringLiteral("计时模式"));
-    auto* modeLayout = new QHBoxLayout(modeGroup);
     settingsModeCombo_ = new QComboBox;
     settingsModeCombo_->setObjectName("focusModeSelector");
     settingsModeCombo_->addItem(QStringLiteral("倒计时 (番茄钟)"), 0);
     settingsModeCombo_->addItem(QStringLiteral("正计时 (自由专注)"), 1);
-    modeLayout->addWidget(new QLabel(QStringLiteral("模式:")));
-    modeLayout->addWidget(settingsModeCombo_);
-    s3Layout->addWidget(modeGroup);
+    addSettingRow(s3Layout, QStringLiteral("计时模式"), QStringLiteral("倒计时设定目标，正计时记录经过时间。"), settingsModeCombo_);
 
-    auto* focusGroup = new QGroupBox(QStringLiteral("深度专注"));
-    auto* focusLayout = new QHBoxLayout(focusGroup);
-    settingsDeepFocusCheck_ = new QCheckBox(QStringLiteral("开启后，离开允许窗口会触发倒计时警告"));
+    settingsDeepFocusCheck_ = new QCheckBox(QStringLiteral("开启深度专注"));
     settingsDeepFocusCheck_->setChecked(true);
     settingsDeepFocusCheck_->setCursor(Qt::PointingHandCursor);
-    focusLayout->addWidget(settingsDeepFocusCheck_);
-    s3Layout->addWidget(focusGroup);
+    addSettingRow(s3Layout, QStringLiteral("深度专注"), QStringLiteral("进入黑名单应用时警告；十秒内返回不计违规。"), settingsDeepFocusCheck_);
 
-    auto* timeGroup = new QGroupBox(QStringLiteral("专注时长"));
-    auto* timeLayout = new QHBoxLayout(timeGroup);
     settingsMinutesSpin_ = new QSpinBox;
     settingsMinutesSpin_->setRange(10, 120);
     settingsMinutesSpin_->setValue(25);
     settingsMinutesSpin_->setSuffix(QStringLiteral(" 分钟"));
-    timeLayout->addWidget(new QLabel(QStringLiteral("时长:")));
-    timeLayout->addWidget(settingsMinutesSpin_);
-    s3Layout->addWidget(timeGroup);
+    addSettingRow(s3Layout, QStringLiteral("专注时长"), QStringLiteral("仅用于倒计时模式。"), settingsMinutesSpin_);
 
-    auto* pauseGroup = new QGroupBox(QStringLiteral("计时中暂停"));
-    auto* pauseSettingLayout = new QHBoxLayout(pauseGroup);
     settingsAllowPauseCheck_ = new QCheckBox(QStringLiteral("允许计时中暂停"));
     settingsAllowPauseCheck_->setChecked(UserPreferences::instance().allowPause());
     settingsAllowPauseCheck_->setCursor(Qt::PointingHandCursor);
-    pauseSettingLayout->addWidget(settingsAllowPauseCheck_);
-    s3Layout->addWidget(pauseGroup);
+    addSettingRow(s3Layout, QStringLiteral("计时中暂停"), QStringLiteral("暂停后五分钟自动继续，也可提前继续。"), settingsAllowPauseCheck_);
 
     QObject::connect(settingsModeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
         this, [this](int idx) {
@@ -1031,9 +1220,7 @@ MainWindow::MainWindow(FocusController& controller,
         });
 
     const auto accessibility = UserPreferences::instance().accessibilityOptions();
-    auto* accessibilityGroup = new QGroupBox(QStringLiteral("无障碍与安静体验"));
-    auto* accessibilityLayout = new QFormLayout(accessibilityGroup);
-    auto* fontScale = new QComboBox(accessibilityGroup);
+    auto* fontScale = new QComboBox;
     fontScale->setObjectName("accessibilityFontScale");
     fontScale->addItem(QStringLiteral("较小"), 90);
     fontScale->addItem(QStringLiteral("默认"), 100);
@@ -1041,14 +1228,15 @@ MainWindow::MainWindow(FocusController& controller,
     fontScale->addItem(QStringLiteral("最大"), 125);
     const int scaleIndex = fontScale->findData(accessibility.fontScalePercent);
     fontScale->setCurrentIndex(scaleIndex >= 0 ? scaleIndex : 1);
-    auto* reduceMotion = new QCheckBox(QStringLiteral("减少动态内容更新"), accessibilityGroup);
+    auto* reduceMotion = new QCheckBox(QStringLiteral("减少动态更新"));
+    reduceMotion->setObjectName("accessibilityReducedMotion");
     reduceMotion->setChecked(accessibility.reducedMotion);
-    auto* highContrast = new QCheckBox(QStringLiteral("增强控件边界与键盘焦点"), accessibilityGroup);
+    auto* highContrast = new QCheckBox(QStringLiteral("增强边界与焦点"));
+    highContrast->setObjectName("accessibilityHighContrast");
     highContrast->setChecked(accessibility.highContrast);
-    accessibilityLayout->addRow(QStringLiteral("文字大小:"), fontScale);
-    accessibilityLayout->addRow(reduceMotion);
-    accessibilityLayout->addRow(highContrast);
-    appearanceSettingsLayout->addWidget(accessibilityGroup);
+    addSettingRow(appearanceSettingsLayout, QStringLiteral("文字大小"), QStringLiteral("调整界面文字的显示比例。"), fontScale);
+    addSettingRow(appearanceSettingsLayout, QStringLiteral("安静体验"), QStringLiteral("减少动态内容刷新，保持计时信息更新。"), reduceMotion);
+    addSettingRow(appearanceSettingsLayout, QStringLiteral("高对比度"), QStringLiteral("突出可操作控件和键盘焦点。"), highContrast);
     const auto saveAccessibility = [this, fontScale, reduceMotion, highContrast]() {
         UserPreferences::AccessibilityOptions options;
         options.fontScalePercent = fontScale->currentData().toInt();
@@ -1084,8 +1272,6 @@ MainWindow::MainWindow(FocusController& controller,
             timerRing_->setPlantType(settingsPlantCombo_->currentData().toUInt());
         });
 
-    auto* tagGroup = new QGroupBox(QStringLiteral("标签"));
-    auto* tagLayout = new QHBoxLayout(tagGroup);
     settingsTagCombo_ = new QComboBox;
     settingsTagCombo_->setObjectName("focusTagSelector");
     settingsTagCombo_->addItem(QStringLiteral("无标签"), 0);
@@ -1097,47 +1283,144 @@ MainWindow::MainWindow(FocusController& controller,
         this, [this](int) {
             refreshHomeTagBadge();
         });
-    tagLayout->addWidget(new QLabel(QStringLiteral("标签:")));
-    tagLayout->addWidget(settingsTagCombo_, 1);
-    s3Layout->addWidget(tagGroup);
+    addSettingRow(s3Layout, QStringLiteral("项目标签"), QStringLiteral("下一次专注记录归属的项目。"), settingsTagCombo_);
     refreshHomeTagBadge();
 
-    auto* guardianGroup = new QGroupBox(QStringLiteral("时间守护"));
-    auto* guardianGLayout = new QHBoxLayout(guardianGroup);
     auto* guardianGoalSpin = new QSpinBox;
     guardianGoalSpin->setRange(10, 600);
     guardianGoalSpin->setValue(m_guardian ? m_guardian->dailyGoalMinutes() : 30);
     guardianGoalSpin->setSuffix(QStringLiteral(" 分钟/天"));
     QObject::connect(guardianGoalSpin, QOverload<int>::of(&QSpinBox::valueChanged),
-        this, [this](int v) {
-            if (m_guardian) { m_guardian->setDailyGoalMinutes(static_cast<uint32_t>(v)); m_guardian->save(); refreshGuardianPage(); }
+        this, [this, guardianGoalSpin](int v) {
+            if (!m_guardian) return;
+            if (!m_guardian->setDailyGoalMinutes(static_cast<uint32_t>(v))) {
+                guardianGoalSpin->blockSignals(true);
+                guardianGoalSpin->setValue(static_cast<int>(m_guardian->dailyGoalMinutes()));
+                guardianGoalSpin->blockSignals(false);
+                DialogPresenter::error(this, QStringLiteral("目标未保存"), m_guardian->lastError());
+            }
+            refreshGuardianPage();
         });
-    guardianGLayout->addWidget(new QLabel(QStringLiteral("每日目标:")));
-    guardianGLayout->addWidget(guardianGoalSpin);
-    s3Layout->addWidget(guardianGroup);
+    addSettingRow(s3Layout, QStringLiteral("时间守护"), QStringLiteral("每天希望累计完成的专注时长。"), guardianGoalSpin);
 
-    auto* dataGroup = new QGroupBox(QStringLiteral("数据与备份"));
+    auto* dataGroup = new QWidget;
+    dataGroup->setObjectName("settingsDataActions");
     auto* dataLayout = new QVBoxLayout(dataGroup);
+    dataLayout->setContentsMargins(0, 4, 0, 16);
+    dataLayout->setSpacing(18);
     auto* dataInfo = new QLabel(QStringLiteral("数据模式：%1  |  专注数据：SQLite 架构 v%2")
         .arg(PathConfig::isPortableMode() ? QStringLiteral("便携模式") : QStringLiteral("安装模式"))
         .arg(DatabaseManager::schemaVersion()));
     dataInfo->setWordWrap(true);
     dataLayout->addWidget(dataInfo);
-    auto* dataButtons = new QHBoxLayout;
+    auto* dataButtons = new QGridLayout;
+    dataButtons->setSpacing(12);
     auto* backupBtn = new QPushButton(QStringLiteral("创建备份"));
     auto* restoreBtn = new QPushButton(QStringLiteral("从备份恢复"));
     auto* exportBtn = new QPushButton(QStringLiteral("导出专注记录"));
     auto* openDataBtn = new QPushButton(QStringLiteral("打开数据目录"));
-    dataButtons->addWidget(backupBtn);
-    dataButtons->addWidget(restoreBtn);
-    dataButtons->addWidget(exportBtn);
-    dataButtons->addWidget(openDataBtn);
+    backupBtn->setProperty("testId", "settingsCreateBackup");
+    restoreBtn->setProperty("testId", "settingsRestoreBackup");
+    exportBtn->setProperty("testId", "settingsExportRecords");
+    openDataBtn->setProperty("testId", "settingsOpenData");
+    DialogPresenter::setPrimary(backupBtn);
+    DialogPresenter::setDanger(restoreBtn);
+    DialogPresenter::setSecondary(exportBtn);
+    DialogPresenter::setSecondary(openDataBtn);
+    for (auto* button : {backupBtn, restoreBtn, exportBtn, openDataBtn}) {
+        button->setMinimumHeight(44);
+        button->setCursor(Qt::PointingHandCursor);
+    }
+    backupBtn->setToolTip(QStringLiteral("选择目录并创建完整本地数据备份"));
+    restoreBtn->setToolTip(QStringLiteral("选择经过校验的备份，重启后执行恢复"));
+    exportBtn->setToolTip(QStringLiteral("导出专注记录，不包含账户密码信息"));
+    openDataBtn->setToolTip(QStringLiteral("在文件管理器中查看当前数据目录"));
+    dataButtons->addWidget(backupBtn, 0, 0);
+    dataButtons->addWidget(exportBtn, 0, 1);
+    dataButtons->addWidget(openDataBtn, 1, 0);
+    dataButtons->setColumnStretch(0, 1);
+    dataButtons->setColumnStretch(1, 1);
     dataLayout->addLayout(dataButtons);
-    dataSettingsLayout->addWidget(dataGroup);
+    auto* diagnosticLogStatus = new QLabel(dataGroup);
+    diagnosticLogStatus->setObjectName("diagnosticLogStatus");
+    diagnosticLogStatus->setWordWrap(true);
+    diagnosticLogStatus->setTextFormat(Qt::PlainText);
+    dataLayout->addWidget(diagnosticLogStatus);
+    auto* restoreSection = new QWidget(dataGroup);
+    restoreSection->setObjectName("settingsRestoreSection");
+    auto* restoreLayout = new QVBoxLayout(restoreSection);
+    restoreLayout->setContentsMargins(0, 20, 0, 0);
+    restoreLayout->setSpacing(10);
+    auto* restoreHeading = new QLabel(QStringLiteral("恢复数据"), restoreSection);
+    restoreHeading->setProperty("settingTitle", true);
+    auto* restoreDescription = new QLabel(
+        QStringLiteral("恢复将替换当前数据，重启后生效。执行前会自动创建安全快照。"), restoreSection);
+    restoreDescription->setProperty("settingDescription", true);
+    restoreDescription->setWordWrap(true);
+    restoreLayout->addWidget(restoreHeading);
+    restoreLayout->addWidget(restoreDescription);
+    restoreLayout->addWidget(restoreBtn, 0, Qt::AlignLeft);
+    dataLayout->addWidget(restoreSection);
+    const auto refreshDiagnosticLogStatus = [diagnosticLogStatus]() {
+        const Logger::RuntimeStatus status = Logger::instance().runtimeStatus();
+        using State = Logger::RuntimeStatus::State;
+        if (status.state == State::Writing) {
+            diagnosticLogStatus->setText(QStringLiteral("诊断日志状态：正常。日志正在写入。"));
+            return;
+        }
+        if (status.state == State::FailedStopped) {
+            QString reason = QStringLiteral("日志操作失败");
+            if (status.failureReason == "empty log path") reason = QStringLiteral("日志路径未配置");
+            else if (status.failureReason == "open failed") reason = QStringLiteral("无法打开日志文件");
+            else if (status.failureReason == "rotation failed") reason = QStringLiteral("日志轮转失败");
+            else if (status.failureReason == "write failed") reason = QStringLiteral("日志写入失败");
+            else if (status.failureReason == "flush failed") reason = QStringLiteral("日志刷新失败");
+            else if (status.failureReason == "close failed") reason = QStringLiteral("日志关闭失败");
+            diagnosticLogStatus->setText(
+                QStringLiteral("诊断日志状态：故障停写（%1）。请退出应用并检查日志目录权限、文件占用及可用空间，再重新启动。")
+                    .arg(reason));
+            return;
+        }
+        diagnosticLogStatus->setText(
+            QStringLiteral("诊断日志状态：未开启。请重新启动应用以初始化诊断日志。"));
+    };
+    auto* diagnosticLogStatusTimer = new QTimer(page5);
+    diagnosticLogStatusTimer->setInterval(1000);
+    const auto syncDiagnosticLogStatusTimer = [this, page5, settingsStack, diagnosticLogStatusTimer,
+                                               refreshDiagnosticLogStatus]() {
+        const bool dataSettingsSelected = stackedWidget_->currentWidget() == page5 &&
+                                          settingsStack->currentIndex() == 3;
+        if (!dataSettingsSelected) {
+            diagnosticLogStatusTimer->stop();
+            return;
+        }
+        if (page5->isVisible()) refreshDiagnosticLogStatus();
+        if (!diagnosticLogStatusTimer->isActive()) diagnosticLogStatusTimer->start();
+    };
+    QObject::connect(settingsStack, &QStackedWidget::currentChanged, this,
+                     [syncDiagnosticLogStatusTimer](int) { syncDiagnosticLogStatusTimer(); });
+    QObject::connect(stackedWidget_, &QStackedWidget::currentChanged, this,
+                     [syncDiagnosticLogStatusTimer](int) { syncDiagnosticLogStatusTimer(); });
+    QObject::connect(diagnosticLogStatusTimer, &QTimer::timeout, this,
+                     [this, page5, settingsStack, diagnosticLogStatusTimer,
+                      refreshDiagnosticLogStatus]() {
+        if (stackedWidget_->currentWidget() == page5 && settingsStack->currentIndex() == 3 &&
+            page5->isVisible()) {
+            refreshDiagnosticLogStatus();
+        } else if (stackedWidget_->currentWidget() != page5 || settingsStack->currentIndex() != 3) {
+            diagnosticLogStatusTimer->stop();
+        }
+    });
+    syncDiagnosticLogStatusTimer();
+    dataSettingsLayout->addWidget(dataGroup, 0, Qt::AlignTop);
     QObject::connect(backupBtn, &QPushButton::clicked, this, [this]() {
-        const QString root = QFileDialog::getExistingDirectory(this, QStringLiteral("选择备份保存位置"));
+        const QString root = DialogPresenter::chooseDirectory(this, QStringLiteral("选择备份保存位置"));
         if (root.isEmpty()) return;
         QString backupDir, error;
+        if (!featureServices_.saveForBackup(controller_, coinManager_, &error)) {
+            DialogPresenter::warning(this, QStringLiteral("暂时无法备份"), error);
+            return;
+        }
         if (BackupService::createBackup(PathConfig::getAppDataDir(), root, &backupDir, &error)) {
             DialogPresenter::information(this, QStringLiteral("备份完成"), QStringLiteral("备份已创建：\n%1").arg(backupDir));
         } else {
@@ -1145,7 +1428,7 @@ MainWindow::MainWindow(FocusController& controller,
         }
     });
     QObject::connect(restoreBtn, &QPushButton::clicked, this, [this]() {
-        const QString backupDir = QFileDialog::getExistingDirectory(this, QStringLiteral("选择 Forest 备份目录"));
+        const QString backupDir = DialogPresenter::chooseDirectory(this, QStringLiteral("选择 Forest 备份目录"));
         if (backupDir.isEmpty()) return;
         QString error;
         if (BackupService::requestRestore(PathConfig::getAppDataDir(), backupDir, &error)) {
@@ -1155,7 +1438,7 @@ MainWindow::MainWindow(FocusController& controller,
         }
     });
     QObject::connect(exportBtn, &QPushButton::clicked, this, [this]() {
-        const QString path = QFileDialog::getSaveFileName(this, QStringLiteral("导出专注记录"),
+        const QString path = DialogPresenter::chooseSaveFile(this, QStringLiteral("导出专注记录"),
             QDir::home().filePath(QStringLiteral("Forest-focus-records.csv")), QStringLiteral("CSV 文件 (*.csv)"));
         if (path.isEmpty()) return;
         QString error;
@@ -1167,45 +1450,78 @@ MainWindow::MainWindow(FocusController& controller,
         QDesktopServices::openUrl(QUrl::fromLocalFile(PathConfig::getAppDataDir()));
     });
 
-    auto* oathGroup = new QGroupBox(QStringLiteral("树梢誓言"));
-    auto* oathLayout = new QHBoxLayout(oathGroup);
     settingsOathInput_ = new QLineEdit;
     settingsOathInput_->setPlaceholderText(QStringLiteral("写下一句专注心愿..."));
-    oathLayout->addWidget(settingsOathInput_);
-    s3Layout->addWidget(oathGroup);
+    addSettingRow(s3Layout, QStringLiteral("树梢誓言"), QStringLiteral("显示在主页的一句专注心愿。"), settingsOathInput_);
 
-    auto* blGroup = new QGroupBox(QStringLiteral("进程黑名单"));
+    auto* blGroup = new QWidget;
+    blGroup->setObjectName("settingsRuleEditor");
     auto* blLayout = new QVBoxLayout(blGroup);
+    blLayout->setContentsMargins(0, 6, 0, 16);
+    blLayout->setSpacing(16);
+    auto* blacklistTitle = new QLabel(QStringLiteral("进程黑名单"), blGroup);
+    blacklistTitle->setProperty("settingTitle", true);
+    blLayout->addWidget(blacklistTitle);
     settingsBlacklistWidget_ = new QListWidget;
+    settingsBlacklistWidget_->setObjectName("processBlacklist");
+    settingsBlacklistWidget_->setFixedHeight(224);
+    settingsBlacklistWidget_->setAccessibleName(QStringLiteral("深度专注进程黑名单"));
     for (const QString& name : ruleEngine_.blacklist()) {
         settingsBlacklistWidget_->addItem(name);
     }
     blLayout->addWidget(settingsBlacklistWidget_);
     auto* inputLayout = new QHBoxLayout;
     settingsBlacklistInput_ = new QLineEdit;
+    settingsBlacklistInput_->setObjectName("processBlacklistInput");
     settingsBlacklistInput_->setPlaceholderText(QStringLiteral("输入进程名，如 chrome.exe"));
     auto* addBtn = new QPushButton(QStringLiteral("添加"));
     auto* removeBtn = new QPushButton(QStringLiteral("移除"));
+    addBtn->setObjectName("processBlacklistAdd");
+    removeBtn->setObjectName("processBlacklistRemove");
+    removeBtn->setEnabled(false);
+    removeBtn->setToolTip(QStringLiteral("先选择需要移除的应用"));
+    addBtn->setToolTip(QStringLiteral("将输入的进程名加入监督规则"));
+    for (auto* button : {addBtn, removeBtn}) {
+        button->setMinimumSize(92, 44);
+    }
+    QObject::connect(settingsBlacklistWidget_, &QListWidget::currentRowChanged, removeBtn,
+                     [removeBtn](int row) { removeBtn->setEnabled(row >= 0); });
     addBtn->setCursor(Qt::PointingHandCursor);
     removeBtn->setCursor(Qt::PointingHandCursor);
     inputLayout->addWidget(settingsBlacklistInput_);
     inputLayout->addWidget(addBtn);
     inputLayout->addWidget(removeBtn);
     blLayout->addLayout(inputLayout);
-    rulesSettingsLayout->addWidget(blGroup);
+    rulesSettingsLayout->addWidget(blGroup, 0, Qt::AlignTop);
 
     QObject::connect(addBtn, &QPushButton::clicked, this, [this]() {
         QString name = settingsBlacklistInput_->text().trimmed();
         if (name.isEmpty()) return;
-        ruleEngine_.addToBlacklist(name);
-        settingsBlacklistWidget_->addItem(name);
+        auto& preferences = UserPreferences::instance();
+        QStringList next = preferences.processBlacklist();
+        next.append(name);
+        if (!preferences.setProcessBlacklist(next)) {
+            DialogPresenter::error(this, QStringLiteral("规则未保存"), preferences.lastError());
+            return;
+        }
+        ruleEngine_.setBlacklist(preferences.processBlacklist());
+        settingsBlacklistWidget_->clear();
+        settingsBlacklistWidget_->addItems(ruleEngine_.blacklist());
         settingsBlacklistInput_->clear();
     });
     QObject::connect(removeBtn, &QPushButton::clicked, this, [this]() {
         auto* item = settingsBlacklistWidget_->currentItem();
         if (!item) return;
-        ruleEngine_.removeFromBlacklist(item->text());
-        delete settingsBlacklistWidget_->takeItem(settingsBlacklistWidget_->row(item));
+        auto& preferences = UserPreferences::instance();
+        QStringList next = preferences.processBlacklist();
+        next.removeAll(item->text());
+        if (!preferences.setProcessBlacklist(next)) {
+            DialogPresenter::error(this, QStringLiteral("规则未保存"), preferences.lastError());
+            return;
+        }
+        ruleEngine_.setBlacklist(preferences.processBlacklist());
+        settingsBlacklistWidget_->clear();
+        settingsBlacklistWidget_->addItems(ruleEngine_.blacklist());
     });
 
     focusSettingsLayout->addStretch();
@@ -1230,7 +1546,7 @@ MainWindow::MainWindow(FocusController& controller,
     // ========== Page 7: 专注挑战 ==========
     stackedWidget_->addWidget(DashboardPageHost::create(
         challengeDashboard_, QStringLiteral("challengePage"),
-        QStringLiteral("QWidget#challengePage { background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #C8EFE1, stop:0.58 #DFF4EC, stop:1 #C7E8F5); }"),
+        QStringLiteral("QWidget#challengePage { background:%1; }").arg(AppStyle::color(AppStyle::Color::Workspace).name()),
         true, stackedWidget_));
 
     // ========== Page 8: 时间守护 ==========
@@ -1240,8 +1556,9 @@ MainWindow::MainWindow(FocusController& controller,
 
     QObject::connect(guardianDashboard_, &GuardianDashboardWidget::dailyGoalChanged, this, [this](int v) {
         if (!m_guardian) return;
-        m_guardian->setDailyGoalMinutes(static_cast<uint32_t>(v));
-        m_guardian->save();
+        if (!m_guardian->setDailyGoalMinutes(static_cast<uint32_t>(v))) {
+            DialogPresenter::error(this, QStringLiteral("目标未保存"), m_guardian->lastError());
+        }
         refreshGuardianPage();
     });
 
@@ -1274,11 +1591,16 @@ MainWindow::MainWindow(FocusController& controller,
             if (r == 0) { warningOverlay_->hide(); return; }
             warningLabel_->setText(
                 QStringLiteral("违规！%1 秒内切回，否则小树枯萎").arg(r));
+            if (centralWidget()) warningOverlay_->setGeometry(centralWidget()->rect());
             warningOverlay_->show(); warningOverlay_->raise();
         });
 
     QObject::connect(&controller_, &FocusController::sig_stateChanged,
         this, [this](FocusController::State s) {
+            if (s == FocusController::State::RUNNING) {
+                monitor_.startMonitoring();
+                quoteTimer_.start(10000);
+            }
             if (s != FocusController::State::WARNING && warningOverlay_) warningOverlay_->hide();
             if (s != FocusController::State::PAUSED) hidePauseBreakOverlay();
             updateUI();
@@ -1288,14 +1610,15 @@ MainWindow::MainWindow(FocusController& controller,
         this, [this](uint32_t recordId, uint32_t status, const FocusResultService::Outcome& outcome) {
             handleFocusFinalized(recordId, status, outcome);
         });
-    QObject::connect(focusSession_.get(), &FocusSessionCoordinator::startRegistrationFailed,
-        this, [this]() {
-            DialogPresenter::error(this, QStringLiteral("数据保存失败"),
-                QStringLiteral("无法安全登记本次专注，专注将停止。"));
-        });
-
     QObject::connect(&controller_, &FocusController::sig_growthStageChanged,
         this, [this](uint32_t) { updateUI(); });
+    QObject::connect(&controller_, &FocusController::sig_finalizationSaveFailed,
+        this, [this](const QString& error) {
+            monitor_.stopMonitoring();
+            quoteTimer_.stop();
+            DialogPresenter::error(this, QStringLiteral("专注结果未能保存"),
+                QStringLiteral("计时已停止，本次结束决定不会改判。请检查数据目录，然后点击“重试保存”。保存成功前不能开始新专注或正常退出。\n\n%1").arg(error));
+        });
 
     QObject::connect(&quoteTimer_, &QTimer::timeout, this, [this]() {
         if (!UserPreferences::instance().accessibilityOptions().reducedMotion) {
@@ -1315,6 +1638,7 @@ MainWindow::MainWindow(FocusController& controller,
         });
 
     warningOverlay_ = new QWidget(this);
+    warningOverlay_->setObjectName("warningOverlay");
     warningOverlay_->setStyleSheet("background-color: rgba(180,40,40,220);");
     warningOverlay_->setGeometry(0, 0, width(), height());
     warningLabel_ = new QLabel(warningOverlay_);
@@ -1328,7 +1652,7 @@ MainWindow::MainWindow(FocusController& controller,
     applyAccessibilityPreferences();
     auto* startShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+Alt+F")), this);
     QObject::connect(startShortcut, &QShortcut::activated, this, [this]() {
-        if (controller_.currentState() == FocusController::State::IDLE) onStartClicked();
+        if (FocusPageState::from(controller_).idle || controller_.hasPendingFinalization()) onStartClicked();
         else if (controller_.currentState() == FocusController::State::PAUSED) resumeFromPauseBreak();
     });
     auto* pauseShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+Alt+P")), this);
@@ -1339,7 +1663,8 @@ MainWindow::MainWindow(FocusController& controller,
     });
     auto* abandonShortcut = new QShortcut(QKeySequence(QStringLiteral("Ctrl+Alt+A")), this);
     QObject::connect(abandonShortcut, &QShortcut::activated, this, [this]() {
-        if (FocusPageState::from(controller_).active) onAbandonClicked();
+        const auto state = FocusPageState::from(controller_);
+        if (state.active && !state.saveFailed) onAbandonClicked();
     });
     restoreFocusSetup();
     refreshGarden();
@@ -1359,13 +1684,13 @@ void MainWindow::initNavigationLayout()
     sidebarWidget_->setFixedWidth(180);
     sidebarWidget_->setObjectName("sidebarWidget");
     sidebarWidget_->setStyleSheet(
-        "QWidget#sidebarWidget { background-color: #3E8D75; border-right: 1px solid rgba(255,255,255,65); }"
+        "QWidget#sidebarWidget { background-color: #143F36; border-right:none; }"
         "QPushButton[nav=\"true\"] { background:transparent; border:none; border-radius:0;"
         "  border-left:3px solid transparent; text-align:left; padding:12px 16px;"
-        "  font-size:14px; font-weight:bold; color:rgba(247,255,247,185); }"
-        "QPushButton[nav=\"true\"]:hover { background-color:rgba(255,255,255,35); color:#FFFFFF; }"
-        "QPushButton[nav=\"true\"][active=\"true\"] { background-color:rgba(242,244,198,48); color:#F7FFF7;"
-        "  border-left:4px solid #F2F4C6; }"
+        "  font-size:14px; font-weight:600; color:#C6DAD2; }"
+        "QPushButton[nav=\"true\"]:hover { background-color:#215648; color:#FFFFFF; }"
+        "QPushButton[nav=\"true\"][active=\"true\"] { background-color:#295F4F; color:#FFFFFF;"
+        "  border-left:3px solid #A2D8C1; }"
         "QPushButton#btnToggle { background:transparent; border:none; text-align:left;"
         "  padding:16px; font-weight:bold; color:#F7FFF7; font-size:15px; }"
         "QPushButton#btnToggle:hover { color:#F2F4C6; }");
@@ -1560,6 +1885,17 @@ void MainWindow::refreshChallengePage()
 {
     if (!challengeDashboard_) return;
     const auto snapshot = dashboardSnapshots_.challenges();
+    challengeDashboard_->setEnabled(snapshot.error.isEmpty());
+    challengeDashboard_->setToolTip(snapshot.error.isEmpty() ? QString() : QStringLiteral("读取失败，重新进入此页面可重试。"));
+    if (!snapshot.error.isEmpty()) {
+        if (stackedWidget_ && stackedWidget_->currentIndex() == 7 && challengeReadError_ != snapshot.error) {
+            challengeReadError_ = snapshot.error;
+            DialogPresenter::error(this, QStringLiteral("挑战数据读取失败"),
+                QStringLiteral("原进度已保留，未将错误当作零进度。请检查数据目录后重新进入页面。\n%1").arg(snapshot.error));
+        }
+        return;
+    }
+    challengeReadError_.clear();
     challengeDashboard_->setSnapshot(
         snapshot.coinBalance,
         snapshot.challenges,
@@ -1616,7 +1952,7 @@ void MainWindow::refreshHomeTagBadge()
 
 void MainWindow::showHomePlantSelector()
 {
-    if (controller_.currentState() == FocusController::State::RUNNING ||
+    if (controller_.hasPendingFinalization() || controller_.currentState() == FocusController::State::RUNNING ||
         controller_.currentState() == FocusController::State::PAUSED ||
         controller_.currentState() == FocusController::State::WARNING) {
         return;
@@ -1626,22 +1962,27 @@ void MainWindow::showHomePlantSelector()
     QDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("选择植物"));
     DialogPresenter::prepare(dialog);
-    dialog.setStyleSheet(
-        "QDialog { background-color:#5BAE93; }"
-        "QLabel#selectorTitle { color:#F7FFF7; font-size:18px; font-weight:900; }"
-        "QPushButton[plantCard=\"true\"] { background-color:rgba(255,255,255,42);"
-        " border:1px solid rgba(255,255,255,95); border-radius:10px; padding:10px;"
-        " color:#F7FFF7; font-weight:800; text-align:center; }"
-        "QPushButton[plantCard=\"true\"]:hover { background-color:rgba(242,244,198,72);"
-        " border-color:#F2F4C6; }");
+    dialog.setStyleSheet(dialog.styleSheet() + QStringLiteral(
+        "QDialog#forestDialog { background:#FFFFFF; border:1px solid #D5DFDA; border-radius:20px; }"
+        "QDialog#forestDialog QLabel#selectorTitle { color:#203C35; font-size:20px; font-weight:800; }"
+        "QDialog#forestDialog QLabel#selectorDescription { color:#53665F; font-size:14px; background:transparent; }"
+        "QDialog#forestDialog QPushButton[plantCard=\"true\"] { background:#F5F7F8;"
+        " border:1px solid #D5DFDA; border-radius:8px; padding:12px;"
+        " color:#203C35; font-weight:800; text-align:center; }"
+        "QDialog#forestDialog QPushButton[plantCard=\"true\"]:hover { background:#EFF5F2; border-color:#246B57; }"
+        "QDialog#forestDialog QPushButton[plantCard=\"true\"]:pressed { background:#C9F0DE; }"
+        "QDialog#forestDialog QPushButton[plantCard=\"true\"]:focus { border:2px solid #173F33; }"));
 
     auto* layout = new QVBoxLayout(&dialog);
-    layout->setContentsMargins(18, 18, 18, 18);
-    layout->setSpacing(14);
+    layout->setContentsMargins(28, 26, 28, 24);
+    layout->setSpacing(20);
     auto* title = new QLabel(QStringLiteral("选择本次专注植物"), &dialog);
     title->setObjectName("selectorTitle");
-    title->setAlignment(Qt::AlignCenter);
     layout->addWidget(title);
+    auto* description = new QLabel(QStringLiteral("选择已解锁植物，陪伴本次专注。"), &dialog);
+    description->setObjectName("selectorDescription");
+    description->setWordWrap(true);
+    layout->addWidget(description);
 
     auto* grid = new QGridLayout;
     grid->setSpacing(12);
@@ -1650,10 +1991,14 @@ void MainWindow::showHomePlantSelector()
         if (!coinManager_.isPlantUnlocked(plant.type)) continue;
         auto* btn = new QPushButton(plant.displayName, &dialog);
         btn->setProperty("plantCard", "true");
+        btn->setAutoDefault(false);
+        btn->setAccessibleName(plant.displayName);
+        btn->setToolTip(plant.displayName);
+        btn->setFocusPolicy(Qt::StrongFocus);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setIcon(QIcon(PlantImageUtils::loadPlantIcon(plant.iconPath)));
         btn->setIconSize(QSize(76, 76));
-        btn->setMinimumSize(132, 116);
+        btn->setMinimumSize(168, 116);
         grid->addWidget(btn, unlockedCount / 3, unlockedCount % 3);
         QObject::connect(btn, &QPushButton::clicked, &dialog, [this, &dialog, type = plant.type]() {
             if (settingsPlantCombo_) {
@@ -1673,12 +2018,18 @@ void MainWindow::showHomePlantSelector()
     if (unlockedCount == 0) {
         auto* empty = new QLabel(QStringLiteral("暂无已解锁植物"), &dialog);
         empty->setAlignment(Qt::AlignCenter);
-        empty->setStyleSheet("color:#F7FFF7; font-weight:800;");
+        empty->setStyleSheet("color:#245543; font-weight:800;");
         layout->addWidget(empty);
     } else {
         layout->addLayout(grid);
     }
 
+    auto* close = new QPushButton(QStringLiteral("取消"), &dialog);
+    DialogPresenter::setSecondary(close);
+    close->setDefault(true);
+    close->setFocus(Qt::OtherFocusReason);
+    connect(close, &QPushButton::clicked, &dialog, &QDialog::reject);
+    layout->addWidget(close, 0, Qt::AlignRight);
     dialog.exec();
 }
 
@@ -1726,7 +2077,7 @@ void MainWindow::hideHomeModeOptions()
 void MainWindow::showPauseBreakOverlay()
 {
     if (!pauseBreakOverlay_) return;
-    pauseBreakRemainingSeconds_ = 5 * 60;
+    pauseBreakRemainingSeconds_ = static_cast<int>(controller_.pauseRemainingSeconds());
     updatePauseBreakText();
 
     QWidget* host = centralWidget();
@@ -1754,8 +2105,6 @@ void MainWindow::resumeFromPauseBreak()
         return;
     }
     focusSession_->resume();
-    monitor_.startMonitoring();
-    quoteTimer_.start(10000);
     updateUI();
 }
 
@@ -1776,20 +2125,10 @@ void MainWindow::refreshHomeModeControls()
     bool stopwatch = settingsModeCombo_->currentData().toUInt() == 1;
     homeCountdownBtn_->setProperty("active", stopwatch ? "false" : "true");
     homeStopwatchBtn_->setProperty("active", stopwatch ? "true" : "false");
-    if (homeCountdownModeLabel_) homeCountdownModeLabel_->setProperty("active", stopwatch ? "false" : "true");
-    if (homeStopwatchModeLabel_) homeStopwatchModeLabel_->setProperty("active", stopwatch ? "true" : "false");
     homeCountdownBtn_->style()->unpolish(homeCountdownBtn_);
     homeCountdownBtn_->style()->polish(homeCountdownBtn_);
     homeStopwatchBtn_->style()->unpolish(homeStopwatchBtn_);
     homeStopwatchBtn_->style()->polish(homeStopwatchBtn_);
-    if (homeCountdownModeLabel_) {
-        homeCountdownModeLabel_->style()->unpolish(homeCountdownModeLabel_);
-        homeCountdownModeLabel_->style()->polish(homeCountdownModeLabel_);
-    }
-    if (homeStopwatchModeLabel_) {
-        homeStopwatchModeLabel_->style()->unpolish(homeStopwatchModeLabel_);
-        homeStopwatchModeLabel_->style()->polish(homeStopwatchModeLabel_);
-    }
 
     if (countdownOptionsWidget_) {
         auto* groupRow = countdownOptionsWidget_->findChild<QWidget*>("groupPlantOptionRow");
@@ -1871,20 +2210,19 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
             resumeFromPauseBreak();
             return true;
         }
-        if (watched == homeCountdownModeLabel_) {
-            showHomeModeOptions(false);
-            return true;
-        }
-        if (watched == homeStopwatchModeLabel_) {
-            showHomeModeOptions(true);
-            return true;
-        }
     }
     return QMainWindow::eventFilter(watched, event);
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+    if (controller_.hasPendingFinalization()) {
+        closingFocus_ = true;
+        const bool saved = controller_.retryPendingFinalization();
+        closingFocus_ = false;
+        if (saved) event->accept(); else event->ignore();
+        return;
+    }
     if (controller_.currentState() == FocusController::State::RUNNING ||
         controller_.currentState() == FocusController::State::PAUSED ||
         controller_.currentState() == FocusController::State::WARNING) {
@@ -1892,14 +2230,21 @@ void MainWindow::closeEvent(QCloseEvent* event)
             QStringLiteral("确认退出"),
             QStringLiteral("正在专注中！退出将会导致小树枯萎。\n确定要退出吗？"));
         if (confirmed) {
-            focusSession_->abandon();
-            event->accept();
+            closingFocus_ = true;
+            const bool saved = focusSession_->abandon();
+            closingFocus_ = false;
+            if (saved) event->accept(); else event->ignore();
         } else { event->ignore(); }
     } else { event->accept(); }
 }
 
 void MainWindow::onStartClicked()
 {
+    if (controller_.hasPendingFinalization()) {
+        controller_.retryPendingFinalization();
+        return;
+    }
+    if (!FocusPageState::from(controller_).idle) return;
     hideHomeModeOptions();
 
     bool isCountdown = settingsModeCombo_->currentData().toUInt() == 0;
@@ -1918,6 +2263,7 @@ void MainWindow::onStartClicked()
     request.allowPause = isCountdown && settingsAllowPauseCheck_ && settingsAllowPauseCheck_->isChecked();
     request.autoExtend = isCountdown && homeAutoExtendCheck_ && homeAutoExtendCheck_->isChecked();
     if (!focusSession_->start(request)) {
+        if (controller_.hasPendingFinalization()) return;
         DialogPresenter::warning(this, QStringLiteral("无法开始专注"),
             QStringLiteral("专注记录未能安全创建，请稍后重试。"));
         return;
@@ -1936,8 +2282,12 @@ void MainWindow::onStartClicked()
 void MainWindow::onPauseResumeClicked()
 {
     if (controller_.currentState() == FocusController::State::RUNNING) {
-        focusSession_->pause(); monitor_.stopMonitoring(); quoteTimer_.stop();
-        showPauseBreakOverlay();
+        focusSession_->pause();
+        if (controller_.currentState() == FocusController::State::PAUSED) {
+            monitor_.stopMonitoring();
+            quoteTimer_.stop();
+            showPauseBreakOverlay();
+        }
     } else if (controller_.currentState() == FocusController::State::PAUSED) {
         resumeFromPauseBreak();
         return;
@@ -1961,12 +2311,21 @@ void MainWindow::onAbandonClicked()
 void MainWindow::updateUI()
 {
     const FocusPageState state = FocusPageState::from(controller_);
-    startBtn_->setVisible(state.idle);
-    startBtn_->setEnabled(state.idle);
+    if (focusHint_) {
+        focusHint_->setText(state.saveFailed ? QStringLiteral("结果待保存")
+            : state.paused ? QStringLiteral("暂停中")
+            : state.running ? QStringLiteral("正在专注")
+            : state.active ? QStringLiteral("返回安全应用以继续专注")
+            : QStringLiteral("准备开始专注"));
+    }
+    if (coinLabel_) coinLabel_->setVisible(!state.active);
+    startBtn_->setVisible(state.idle || state.saveFailed);
+    startBtn_->setEnabled(state.idle || state.saveFailed);
+    startBtn_->setText(state.saveFailed ? QStringLiteral("重试保存") : QStringLiteral("开始专注"));
     pauseBtn_->setVisible(state.canPause && !state.paused);
-    abandonBtn_->setVisible(state.active && !state.paused);
+    abandonBtn_->setVisible(state.active && !state.paused && !state.saveFailed);
     pauseBtn_->setEnabled(state.canPause);
-    abandonBtn_->setEnabled(state.active && !state.paused);
+    abandonBtn_->setEnabled(state.active && !state.paused && !state.saveFailed);
     if (state.paused && pauseBreakOverlay_ && !pauseBreakOverlay_->isVisible()) {
         showPauseBreakOverlay();
     }
@@ -1986,6 +2345,7 @@ void MainWindow::updateUI()
         timerRing_->setPlantType(settingsPlantCombo_->currentData().toUInt());
         refreshHomeModeControls();
     }
+    timerRing_->setSessionState(state.active, controller_.growthStage());
 
     abandonBtn_->setText(QStringLiteral("放弃"));
     if (state.running) pauseBtn_->setText(QStringLiteral("暂停"));
@@ -1997,6 +2357,19 @@ void MainWindow::updateUI()
 void MainWindow::refreshGarden()
 {
     auto snapshot = dashboardSnapshots_.forest();
+    if (forestDashboard_) {
+        forestDashboard_->setEnabled(snapshot.error.isEmpty());
+        forestDashboard_->setToolTip(snapshot.error.isEmpty() ? QString() : QStringLiteral("读取失败，重新进入此页面可重试。"));
+    }
+    if (!snapshot.error.isEmpty()) {
+        if (stackedWidget_ && stackedWidget_->currentIndex() == 1 && forestReadError_ != snapshot.error) {
+            forestReadError_ = snapshot.error;
+            DialogPresenter::error(this, QStringLiteral("森林数据读取失败"),
+                QStringLiteral("原森林及统计已保留，未将错误当作空记录。请检查数据目录后重新进入页面。\n%1").arg(snapshot.error));
+        }
+        return;
+    }
+    forestReadError_.clear();
     gardenCanvas_->loadRecords(snapshot.records);
     if (forestDashboard_) {
         forestDashboard_->setTagNames(snapshot.tagNames);
@@ -2020,7 +2393,9 @@ void MainWindow::setupTrayIcon()
     trayAbandonAction_ = menu->addAction(QStringLiteral("放弃专注"));
     QObject::connect(trayAbandonAction_, &QAction::triggered, this, &MainWindow::onAbandonClicked);
     menu->addSeparator();
-    menu->addAction(QStringLiteral("退出"), qApp, &QApplication::quit);
+    auto* quitAction = menu->addAction(QStringLiteral("退出"));
+    quitAction->setObjectName("trayQuitAction");
+    QObject::connect(quitAction, &QAction::triggered, this, &MainWindow::close);
     trayIcon_->setContextMenu(menu);
     QObject::connect(trayIcon_, &QSystemTrayIcon::activated, this, &MainWindow::onTrayActivated);
     trayIcon_->show();
@@ -2033,16 +2408,20 @@ void MainWindow::updateTrayStatus()
 
     const FocusPageState state = FocusPageState::from(controller_);
     if (trayPauseAction_) {
-        trayPauseAction_->setVisible(state.active);
+        trayPauseAction_->setVisible(state.active && !state.saveFailed);
         trayPauseAction_->setEnabled(state.paused || state.canPause);
         trayPauseAction_->setText(state.paused ? QStringLiteral("继续专注")
                                                 : QStringLiteral("暂停专注"));
     }
     if (trayAbandonAction_) {
-        trayAbandonAction_->setVisible(state.active && !state.paused);
-        trayAbandonAction_->setEnabled(state.active && !state.paused);
+        trayAbandonAction_->setVisible(state.active && !state.paused && !state.saveFailed);
+        trayAbandonAction_->setEnabled(state.active && !state.paused && !state.saveFailed);
     }
 
+    if (state.saveFailed) {
+        trayIcon_->setToolTip(QStringLiteral("Forest 专注森林 - 结果待保存，请返回主窗口重试"));
+        return;
+    }
     if (state.idle) {
         trayIcon_->setToolTip(QStringLiteral("Forest 专注森林 - 准备开始"));
         return;
@@ -2073,7 +2452,9 @@ void MainWindow::applyAccessibilityPreferences()
             "QPushButton:focus, QComboBox:focus, QSpinBox:focus, QLineEdit:focus, QCheckBox:focus {"
             " outline:2px solid #F2C94C; outline-offset:2px; }");
     }
-    qApp->setStyleSheet(AppStyle::styleSheet() + contrastRules);
+    qApp->setStyleSheet(AppStyle::scaledStyleSheet(AppStyle::styleSheet(), options.fontScalePercent) + contrastRules);
+    AppStyle::applyAccessibility(*this);
+    for (QWidget* child : findChildren<QWidget*>()) AppStyle::applyAccessibility(*child);
 }
 
 void MainWindow::onTrayActivated(QSystemTrayIcon::ActivationReason reason)
@@ -2129,6 +2510,7 @@ void MainWindow::handleFocusFinalized(uint32_t recordId, uint32_t status,
             QStringLiteral("专注记录已保存，但后续状态未能完成更新：%1").arg(outcome.error));
         return;
     }
+    if (closingFocus_) return;
     const bool completed = static_cast<FocusRecordStatus>(status) == FocusRecordStatus::Success;
     if (outcome.alreadyApplied && !completed) return;
     showFocusResult(recordId, outcome, completed);
@@ -2138,29 +2520,70 @@ void MainWindow::showFocusResult(uint32_t recordId, const FocusResultService::Ou
                                  bool completed)
 {
     const auto record = db_.readById(recordId);
-    if (!record) return;
+    if (!record) {
+        DialogPresenter::error(this, QStringLiteral("专注结果读取失败"), db_.lastError().isEmpty()
+            ? QStringLiteral("结果记录暂不可用，请到我的森林重试。") : db_.lastError());
+        return;
+    }
 
     const FocusRecord& focus = record.value();
     const QString plantName = PlantCatalog::isKnown(focus.plantType)
         ? PlantCatalog::byType(focus.plantType).displayName : QStringLiteral("当前植物");
     const uint32_t minutes = (focus.actualSeconds + 59) / 60;
 
+    QWidget backdrop(centralWidget());
+    backdrop.setObjectName("focusResultBackdrop");
+    backdrop.setStyleSheet("QWidget#focusResultBackdrop { background:rgba(12,45,34,118); border:none; }");
+    backdrop.setAttribute(Qt::WA_TransparentForMouseEvents);
+    backdrop.setGeometry(centralWidget()->rect());
+    backdrop.show();
+    backdrop.raise();
     QDialog dialog(this);
     dialog.setWindowTitle(completed ? QStringLiteral("专注完成") : QStringLiteral("本次专注已结束"));
+    dialog.setProperty("testId", "focusResultDialog");
     DialogPresenter::prepare(dialog);
-    dialog.setMinimumWidth(410);
+    dialog.setMinimumWidth(560);
+    dialog.setMaximumWidth(640);
     auto* layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(30, 26, 30, 24);
     layout->setSpacing(14);
 
+    auto* header = new QHBoxLayout;
+    header->setSpacing(20);
+    auto* plant = new QLabel(&dialog);
+    plant->setObjectName("focusResultPlant");
+    plant->setFixedSize(96, 112);
+    plant->setAlignment(Qt::AlignCenter);
+    QPixmap resultPlant = PlantImageUtils::loadPlantIcon(
+        PlantCatalog::byType(focus.plantType).iconPath);
+    if (!completed && !resultPlant.isNull()) {
+        QImage image = resultPlant.toImage().convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < image.height(); ++y) {
+            auto* pixels = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < image.width(); ++x) {
+                const int gray = qGray(pixels[x]);
+                pixels[x] = qRgba(gray, gray, gray, qAlpha(pixels[x]));
+            }
+        }
+        resultPlant = QPixmap::fromImage(image);
+    }
+    plant->setPixmap(resultPlant.scaled(plant->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    plant->setAccessibleName(plantName);
+    header->addWidget(plant);
     auto* title = new QLabel(completed ? QStringLiteral("做得好，专注已经完成")
                                         : QStringLiteral("这次先停在这里"), &dialog);
+    title->setObjectName("focusResultTitle");
+    title->setWordWrap(true);
+    title->setTextFormat(Qt::PlainText);
     title->setStyleSheet("font-size:22px; font-weight:700; color:#245543;");
-    layout->addWidget(title);
+    header->addWidget(title, 1);
+    layout->addLayout(header);
 
     auto* summary = new QLabel(&dialog);
+    summary->setObjectName("focusResultSummary");
     summary->setWordWrap(true);
-    summary->setStyleSheet("font-size:15px; line-height:1.45; color:#48675B;");
+    summary->setTextFormat(Qt::PlainText);
+    summary->setStyleSheet("font-size:15px; color:#48675B; padding:12px 0;");
     if (completed) {
         summary->setText(QStringLiteral("%1 分钟专注 · %2\n获得 🪙 %3%4")
             .arg(minutes)
@@ -2178,6 +2601,7 @@ void MainWindow::showFocusResult(uint32_t recordId, const FocusResultService::Ou
     actions->addStretch();
     auto* closeButton = new QPushButton(completed ? QStringLiteral("稍后再说") : QStringLiteral("返回主页"), &dialog);
     closeButton->setMinimumWidth(105);
+    closeButton->setDefault(true);
     DialogPresenter::setSecondary(closeButton);
     actions->addWidget(closeButton);
     QObject::connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::reject);
@@ -2186,7 +2610,11 @@ void MainWindow::showFocusResult(uint32_t recordId, const FocusResultService::Ou
     bool startAgain = false;
     if (completed) {
         auto* restButton = new QPushButton(QStringLiteral("开始 5 分钟休息"), &dialog);
+        restButton->setProperty("testId", "focusRestButton");
         auto* againButton = new QPushButton(QStringLiteral("再专注一次"), &dialog);
+        againButton->setProperty("testId", "focusAgainButton");
+        restButton->setAutoDefault(false);
+        againButton->setAutoDefault(false);
         DialogPresenter::setSecondary(restButton);
         DialogPresenter::setPrimary(againButton);
         actions->addWidget(restButton);
@@ -2204,28 +2632,48 @@ void MainWindow::showFocusResult(uint32_t recordId, const FocusResultService::Ou
     if (qApp->property("forest.uiSmokeAutoClose").toBool()) {
         QTimer::singleShot(0, &dialog, &QDialog::reject);
     }
+    dialog.adjustSize();
+    QPainterPath resultShape;
+    resultShape.addRoundedRect(QRectF(dialog.rect()), 22, 22);
+    dialog.setMask(QRegion(resultShape.toFillPolygon().toPolygon()));
     dialog.exec();
 
     if (startBreak) {
         QDialog restDialog(this);
         restDialog.setWindowTitle(QStringLiteral("短暂休息"));
+        restDialog.setProperty("testId", "focusRestDialog");
         DialogPresenter::prepare(restDialog);
+        restDialog.setMinimumWidth(560);
+        restDialog.setMaximumWidth(640);
         auto* restLayout = new QVBoxLayout(&restDialog);
         restLayout->setContentsMargins(34, 30, 34, 28);
+        restLayout->setSpacing(18);
         auto* restTitle = new QLabel(QStringLiteral("休息 5 分钟"), &restDialog);
+        restTitle->setObjectName("focusRestTitle");
+        restTitle->setAlignment(Qt::AlignCenter);
         restTitle->setStyleSheet("font-size:22px; font-weight:700; color:#245543;");
         auto* remaining = new QLabel(&restDialog);
+        remaining->setObjectName("focusRestRemaining");
         remaining->setAlignment(Qt::AlignCenter);
-        remaining->setStyleSheet("font-size:38px; color:#48A47E;");
+        remaining->setStyleSheet("font-size:52px; color:#287756; padding:12px 0;");
         auto* resumeButton = new QPushButton(QStringLiteral("返回专注"), &restDialog);
+        resumeButton->setProperty("testId", "focusRestReturnButton");
+        resumeButton->setDefault(true);
         DialogPresenter::setPrimary(resumeButton);
+        auto* restDescription = new QLabel(QStringLiteral("离开屏幕、喝水或活动一下。休息不计入专注记录和奖励。"), &restDialog);
+        restDescription->setObjectName("focusRestDescription");
+        restDescription->setWordWrap(true);
+        restDescription->setAlignment(Qt::AlignCenter);
+        restDescription->setStyleSheet("font-size:15px; color:#48675B;");
         restLayout->addWidget(restTitle);
-        restLayout->addWidget(new QLabel(QStringLiteral("离开屏幕、喝水或活动一下。休息不计入专注记录和奖励。"), &restDialog));
+        restLayout->addWidget(restDescription);
         restLayout->addWidget(remaining);
-        restLayout->addWidget(resumeButton, 0, Qt::AlignRight);
+        restLayout->addWidget(resumeButton, 0, Qt::AlignHCenter);
 
-        int seconds = 5 * 60;
+        const qint64 restDeadline = controller_.clockMilliseconds() + 300000;
         const auto updateBreakText = [&]() {
+            const int seconds = static_cast<int>(qMax<qint64>(0,
+                restDeadline - controller_.clockMilliseconds() + 999) / 1000);
             remaining->setText(QStringLiteral("%1:%2")
                 .arg(seconds / 60, 2, 10, QLatin1Char('0'))
                 .arg(seconds % 60, 2, 10, QLatin1Char('0')));
@@ -2233,7 +2681,7 @@ void MainWindow::showFocusResult(uint32_t recordId, const FocusResultService::Ou
         updateBreakText();
         QTimer restTimer(&restDialog);
         QObject::connect(&restTimer, &QTimer::timeout, &restDialog, [&]() {
-            if (--seconds <= 0) {
+            if (controller_.clockMilliseconds() >= restDeadline) {
                 restDialog.accept();
                 return;
             }
@@ -2241,6 +2689,10 @@ void MainWindow::showFocusResult(uint32_t recordId, const FocusResultService::Ou
         });
         QObject::connect(resumeButton, &QPushButton::clicked, &restDialog, &QDialog::accept);
         restTimer.start(1000);
+        restDialog.adjustSize();
+        QPainterPath restShape;
+        restShape.addRoundedRect(QRectF(restDialog.rect()), 22, 22);
+        restDialog.setMask(QRegion(restShape.toFillPolygon().toPolygon()));
         restDialog.exec();
     }
     if (startAgain) QTimer::singleShot(0, this, &MainWindow::onStartClicked);

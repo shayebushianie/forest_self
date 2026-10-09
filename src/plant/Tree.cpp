@@ -1,5 +1,7 @@
 ﻿#include "plant/Tree.h"
 
+#include "config/PlantCatalog.h"
+
 void Tree::grow(int actualSeconds, int totalSeconds)
 {
     if (totalSeconds <= 0) return;
@@ -31,7 +33,7 @@ void Tree::wither()
 
 uint32_t Tree::getGrowthStage() const { return growthStage_; }
 
-uint32_t Tree::getPlantType() const { return 0; }
+uint32_t Tree::getPlantType() const { return PlantTypeId::Oak; }
 
 std::string Tree::getStageName() const
 {

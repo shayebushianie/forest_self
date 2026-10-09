@@ -1,4 +1,4 @@
-#include "ui/GuardianDialog.h"
+﻿#include "ui/GuardianDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
@@ -110,8 +110,12 @@ GuardianDialog::GuardianDialog(GuardianManager* mgr, QWidget* parent)
         "QSpinBox::up-button { width:24px; }"
         "QSpinBox::down-button { width:24px; }");
     QObject::connect(m_goalSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int v) {
-        m_mgr->setDailyGoalMinutes(static_cast<uint32_t>(v));
-        m_mgr->save();
+        if (!m_mgr->setDailyGoalMinutes(static_cast<uint32_t>(v))) {
+            m_goalSpin->blockSignals(true);
+            m_goalSpin->setValue(static_cast<int>(m_mgr->dailyGoalMinutes()));
+            m_goalSpin->blockSignals(false);
+            DialogPresenter::error(this, QStringLiteral("目标未保存"), m_mgr->lastError());
+        }
         refresh();
     });
     goalRow->addWidget(m_goalSpin);

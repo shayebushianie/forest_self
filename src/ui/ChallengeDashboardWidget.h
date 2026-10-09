@@ -1,4 +1,4 @@
-#ifndef CHALLENGEDASHBOARDWIDGET_H
+﻿#ifndef CHALLENGEDASHBOARDWIDGET_H
 #define CHALLENGEDASHBOARDWIDGET_H
 
 #include <QColor>
@@ -11,9 +11,11 @@
 
 #include "common/DatabaseCommon.h"
 #include "core/ChallengeManager.h"
+#include "core/ChallengeRewardService.h"
 
 class QPainter;
 class QRectF;
+class PaintedActionButton;
 
 // Desktop game-like challenge center for rewards, daily check-in, and tasks.
 class ChallengeDashboardWidget : public QWidget {
@@ -21,6 +23,7 @@ class ChallengeDashboardWidget : public QWidget {
 
 public:
     explicit ChallengeDashboardWidget(QWidget* parent = nullptr);
+    void setRewardService(ChallengeRewardService* service);
 
     void setSnapshot(uint32_t coins,
                      const QVector<Challenge>& challenges,
@@ -31,10 +34,11 @@ signals:
     void openShopRequested();
     void openPlantSettingsRequested();
     void growthRulesRequested();
-    void rewardCoinsRequested(int amount);
+    void rewardsChanged(int amount);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
@@ -80,12 +84,15 @@ private:
         QColor chestColor;
         bool plus = false;
         bool arrow = false;
+        ChallengeRewardService::TaskType taskType = ChallengeRewardService::TaskType::FocusMinutes;
+        uint32_t plantType = 0;
+        ChallengeRewardService::RewardState state = ChallengeRewardService::RewardState::NotReady;
     };
 
     struct CheckinReward {
         QString icon;
         QString text;
-        QString state;
+        ChallengeRewardService::RewardState state = ChallengeRewardService::RewardState::Locked;
         int coinReward = 0;
     };
 
@@ -95,7 +102,11 @@ private:
         int monthMinutes = 0;
         int monthTarget = 1;
         int rewardGrowth = 0;
+        int monthlyCoins = 0;
         int remainingDays = 0;
+        QDate date;
+        ChallengeRewardService::RewardState monthlyState = ChallengeRewardService::RewardState::NotReady;
+        QString rewardError;
         PlantInfo rewardPlant;
         QVector<CheckinReward> checkins;
         QVector<TaskItem> tasks;
@@ -108,13 +119,10 @@ private:
         QString tooltip;
     };
 
-    DataModel buildData() const;
+    DataModel buildData(const QDate& date) const;
     QVector<PlantInfo> shopPlants() const;
-    void resetDailyStateIfNeeded();
-    void loadRewardState(const QDate& today);
-    void saveRewardState() const;
-    static QString boolVectorToString(const QVector<bool>& values);
-    static QVector<bool> boolVectorFromString(const QString& text, int size);
+    void claimReward(ChallengeRewardService::Kind kind, int index, const QDate& date,
+                     const QString& title, const QString& successText);
     void rebuildCursor(const QPoint& pos);
     const HitRegion* hitAt(const QPoint& pos) const;
     void addHit(const QRectF& rect, HitRole role, int index = -1, const QString& tooltip = QString()) const;
@@ -132,6 +140,8 @@ private:
     void showTaskRewardPreview(const TaskItem& task) const;
     void showPlusDialog(const TaskItem& task) const;
     void routeTaskAction(const TaskItem& task);
+    void activateHit(const HitRegion& hit);
+    void syncKeyboardActions();
 
     void drawHeader(QPainter& painter, const QRectF& rect, const DataModel& data) const;
     void drawMonthlyCard(QPainter& painter, const QRectF& rect, const DataModel& data) const;
@@ -146,20 +156,15 @@ private:
                          const QColor& fill) const;
     void drawButton(QPainter& painter, const QRectF& rect, const QString& text,
                     const QColor& color, bool enabled, bool hovered) const;
-    void drawCard(QPainter& painter, const QRectF& rect, qreal radius = 26.0) const;
-    void drawTextFit(QPainter& painter, const QRectF& rect, const QString& text,
-                     int flags, int minPointSize = 8) const;
 
     uint32_t coins_ = 0;
     QVector<Challenge> challenges_;
     std::vector<FocusRecord> records_;
     mutable QVector<HitRegion> hitRegions_;
     QString hoverKey_;
-    QVector<bool> taskClaimed_;
-    QVector<bool> checkinClaimed_;
-    bool monthlyClaimed_ = false;
-    QDate stateDate_;
-    QString monthKey_;
+    QDate displayedDate_;
+    ChallengeRewardService* rewardService_ = nullptr;
+    QVector<PaintedActionButton*> keyboardActions_;
 };
 
 #endif // CHALLENGEDASHBOARDWIDGET_H

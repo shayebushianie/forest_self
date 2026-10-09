@@ -1,4 +1,4 @@
-#ifndef DASHBOARD_SNAPSHOT_SERVICE_H
+﻿#ifndef DASHBOARD_SNAPSHOT_SERVICE_H
 #define DASHBOARD_SNAPSHOT_SERVICE_H
 
 #include <QMap>
@@ -19,11 +19,13 @@ class TagManager;
 class DashboardSnapshotService final {
 public:
     struct ForestSnapshot {
+        QString error;
         std::vector<FocusRecord> records;
         QMap<uint32_t, QString> tagNames;
     };
 
     struct ChallengeSnapshot {
+        QString error;
         uint32_t coinBalance = 0;
         QVector<Challenge> challenges;
         std::vector<FocusRecord> records;
