@@ -19,6 +19,10 @@ if (-not $TestArguments) {
 }
 
 Add-Type -AssemblyName System.Windows.Forms
+if ($env:GITHUB_ACTIONS -eq 'true' -and $ScreenWidth -eq 0 -and $ScreenHeight -eq 0) {
+    $ScreenWidth = 1920
+    $ScreenHeight = 1080
+}
 if (($ScreenWidth -gt 0) -ne ($ScreenHeight -gt 0)) {
     throw "Provide both screen dimensions or neither."
 }
@@ -82,6 +86,7 @@ $display = Get-CimInstance Win32_VideoController |
     Where-Object { $_.CurrentHorizontalResolution -gt 0 } |
     Select-Object -First 1
 $physicalWidth = if ($display) { [int]$display.CurrentHorizontalResolution } else { 0 }
+Write-Host "UI smoke desktop: logical width=$logicalWidth; physical width=$physicalWidth; requested=${ScreenWidth}x${ScreenHeight}"
 
 if ($QtScaleFactor) {
     $env:QT_SCALE_FACTOR = $QtScaleFactor
