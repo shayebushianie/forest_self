@@ -1,4 +1,4 @@
-#include "storage/UserManager.h"
+﻿#include "storage/UserManager.h"
 #include "storage/StorageEnvelope.h"
 
 #include <QCryptographicHash>
@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
+#include <limits>
+#include <set>
 #include <sstream>
 
 namespace {
@@ -70,11 +72,12 @@ UserManager::~UserManager() { close(); }
 
 bool UserManager::open()
 {
-    users_.clear();
+    close();
     const auto result = StorageEnvelope::read(storagePath(filePath_), kUserMagic);
     if (result.state == StorageEnvelope::ReadState::Missing) {
         userCount_ = 0;
-        return saveUsers();
+        loaded_ = saveUsers();
+        return loaded_;
     }
 
     QByteArray bytes;
@@ -90,13 +93,19 @@ bool UserManager::open()
     }
 
     if (!loadLegacyUsers(bytes)) return false;
-    return migrateEnvelope ? saveUsers() : true;
+    if (migrateEnvelope && !saveUsers()) {
+        close();
+        return false;
+    }
+    loaded_ = true;
+    return true;
 }
 
 void UserManager::close()
 {
     users_.clear();
     userCount_ = 0;
+    loaded_ = false;
 }
 
 std::string UserManager::legacyHashPassword(const std::string& password, const std::string& salt) const
@@ -159,7 +168,8 @@ bool UserManager::isUsernameExists(const std::string& username)
 
 bool UserManager::registerUser(const std::string& username, const std::string& password)
 {
-    if (username.empty() || password.empty() || username.length() >= kUsernameBytes) return false;
+    if (!loaded_ || username.empty() || password.empty() || username.length() >= kUsernameBytes ||
+        username.find('\0') != std::string::npos || userCount_ == std::numeric_limits<uint32_t>::max()) return false;
     if (isUsernameExists(username)) return false;
 
     UserRecord record;
@@ -177,6 +187,7 @@ bool UserManager::registerUser(const std::string& username, const std::string& p
 
 bool UserManager::loginUser(const std::string& username, const std::string& password, uint32_t& outUserId)
 {
+    if (!loaded_ || username.find('\0') != std::string::npos) return false;
     for (UserRecord& record : users_) {
         if (std::strcmp(record.username, username.c_str()) != 0) continue;
         if (!verifyPassword(record, password)) return false;
@@ -207,14 +218,23 @@ std::vector<std::pair<uint32_t, std::string>> UserManager::getAllUsers()
 bool UserManager::loadLegacyUsers(const QByteArray& bytes)
 {
     if (bytes.size() % static_cast<qsizetype>(RECORD_SIZE) != 0) return false;
-    users_.clear();
-    users_.reserve(static_cast<size_t>(bytes.size() / static_cast<qsizetype>(RECORD_SIZE)));
+    std::vector<UserRecord> loaded;
+    loaded.reserve(static_cast<size_t>(bytes.size() / static_cast<qsizetype>(RECORD_SIZE)));
+    std::set<uint32_t> ids;
+    std::set<std::string> names;
+    uint32_t maximumId = 0;
     for (qsizetype offset = 0; offset < bytes.size(); offset += RECORD_SIZE) {
         UserRecord record;
         std::memcpy(&record, bytes.constData() + offset, RECORD_SIZE);
-        users_.push_back(record);
+        if (record.userId == 0 || record.username[0] == '\0' ||
+            !std::memchr(record.username, '\0', sizeof(record.username)) ||
+            (record.reserved[0] != 0 && static_cast<uint8_t>(record.reserved[0]) != kPasswordVersion) ||
+            !ids.insert(record.userId).second || !names.insert(record.username).second) return false;
+        maximumId = std::max(maximumId, record.userId);
+        loaded.push_back(record);
     }
-    userCount_ = static_cast<uint32_t>(users_.size());
+    users_ = std::move(loaded);
+    userCount_ = maximumId;
     return true;
 }
 

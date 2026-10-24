@@ -32,8 +32,10 @@ ShowInstDetails show
 ShowUninstDetails show
 Var ValidateMode
 !define MUI_ABORTWARNING
+!ifndef VERIFICATION_ID
 !define MUI_FINISHPAGE_RUN "$INSTDIR\forest.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "启动 Forest 专注森林"
+!endif
 !insertmacro MUI_PAGE_WELCOME
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckDestination
 !insertmacro MUI_PAGE_DIRECTORY
@@ -101,6 +103,10 @@ Function CheckDestination
     Call CheckPath
     Push "$INSTDIR\${OWNER_MARKER}"
     Call CheckPath
+    StrCmp $ValidateMode 0 validate_registration_done
+    ReadRegStr $2 HKCU "${PRODUCT_REGKEY}" "InstallDir"
+    StrCmp $2 $INSTDIR invalid_destination
+    validate_registration_done:
     IfFileExists "$INSTDIR\forest.portable" invalid_destination
     IfFileExists "$INSTDIR\${OWNER_MARKER}" known_install
     FindFirst $0 $1 "$INSTDIR\*"

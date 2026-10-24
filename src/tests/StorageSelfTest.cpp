@@ -113,6 +113,11 @@ bool testFocusCheckpointRecovery(const QString& path)
     clock.advanceSeconds(30);
     controller.tick();
 
+    if (!expect(activeDb.open(), "opening the same live manager is idempotent")) return false;
+    const auto active = activeDb.readById(0);
+    if (!expect(active && active->status == FocusRecordStatus::Running && active->actualSeconds == 30,
+                "repeated open does not treat an active focus as a crash")) return false;
+
     DatabaseManager recoveredDb(path.toStdString());
     if (!expect(recoveredDb.open(), "interrupted session database reopens")) return false;
     const auto record = recoveredDb.readById(0);

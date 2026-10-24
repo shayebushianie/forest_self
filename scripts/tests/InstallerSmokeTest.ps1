@@ -13,7 +13,7 @@ function Assert-Test([bool]$condition, [string]$name) {
     $checks.Add($name)
 }
 function Run-Setup([string]$destination, [int]$expected) {
-    $process = Start-Process -FilePath $Installer -ArgumentList "/S /VALIDATE /D=$destination" -PassThru
+    $process = Start-Process -FilePath $Installer -ArgumentList "/S /VALIDATE /D=$destination" -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(60000)) { throw 'Installer did not exit within one minute.' }
     Assert-Test ($process.ExitCode -eq $expected) "setup exit $expected : $(Split-Path $destination -Leaf)"
 }
@@ -74,7 +74,7 @@ Write-Fixture "$destination/forest.portable" ''
 $startup = Invoke-ForestRuntimeSmoke "$destination/forest.exe"
 Assert-Test ($startup.ExitCode -eq 0 -and $startup.DeveloperPathExcluded) 'runtime clean startup/exit without developer PATH'
 
-$uninstaller = Start-Process -FilePath "$destination/Uninstall.exe" -ArgumentList '/S' -PassThru
+$uninstaller = Start-Process -FilePath "$destination/Uninstall.exe" -ArgumentList '/S' -WindowStyle Hidden -PassThru
 Assert-Test ($uninstaller.WaitForExit(30000) -and $uninstaller.ExitCode -eq 0) 'uninstaller launcher exit'
 $deadline = [DateTime]::UtcNow.AddSeconds(20)
 while ((Test-Path "$destination/forest.exe") -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 200 }

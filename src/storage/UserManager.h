@@ -31,6 +31,7 @@ private:
     std::string filePath_;
     std::vector<UserRecord> users_;
     uint32_t userCount_ = 0;
+    bool loaded_ = false;
     static constexpr size_t RECORD_SIZE = 64;
 };
 

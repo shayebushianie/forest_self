@@ -34,13 +34,21 @@ function Resolve-QtBin {
 
     $cmakeCache = Join-Path $buildPath "CMakeCache.txt"
     if (Test-Path -LiteralPath $cmakeCache) {
+        $cmakeQtRoot = $null
         $qt6DirLine = Get-Content -LiteralPath $cmakeCache |
             Where-Object { $_ -match "^Qt6_DIR(:[^=]+)?=(.+)$" } |
             Select-Object -First 1
         if ($qt6DirLine -and ($qt6DirLine -match "^Qt6_DIR(:[^=]+)?=(.+)$")) {
             $qt6Dir = $Matches[2]
-            $prefix = Split-Path (Split-Path (Split-Path $qt6Dir -Parent) -Parent) -Parent
-            $candidates += (Join-Path $prefix "bin")
+            $cmakeQtRoot = Split-Path (Split-Path (Split-Path $qt6Dir -Parent) -Parent) -Parent
+            if ($QtDir) {
+                $explicitQtRoot = (Get-ForestPortableFullPath $QtDir $PWD.Path).TrimEnd([char[]]@('\', '/'))
+                $cachedQtRoot = (Get-ForestPortableFullPath $cmakeQtRoot $PWD.Path).TrimEnd([char[]]@('\', '/'))
+                if (-not [String]::Equals($explicitQtRoot, $cachedQtRoot, [StringComparison]::OrdinalIgnoreCase)) {
+                    throw "Explicit -QtDir does not match Qt6_DIR recorded in CMakeCache.txt."
+                }
+            }
+            $candidates += (Join-Path $cmakeQtRoot "bin")
         }
     }
 

@@ -88,6 +88,7 @@ void FocusController::pauseFocus() {
     if (!wasRunning || currentState_ != State::RUNNING) return;
     if (!allowPause_) return;
     checkpointRecord();
+    violating_ = false;
     pauseDeadlineMilliseconds_ = clockMilliseconds() + 300000;
     currentState_ = State::PAUSED; emit sig_stateChanged(currentState_);
 }

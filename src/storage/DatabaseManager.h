@@ -37,6 +37,7 @@ public:
     QString databasePath() const { return databasePath_; }
     QString lastError() const { return lastError_; }
     static constexpr int schemaVersion() { return 4; }
+    static bool validateRecordSchema(const QSqlDatabase& database, int version, QString* error);
 
 private:
     bool createSchema();

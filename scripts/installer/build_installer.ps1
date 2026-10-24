@@ -17,6 +17,16 @@ $workspace = Split-Path -Parent (Split-Path -Parent $repoRoot)
 . (Join-Path $repoRoot 'scripts/PackageSafety.ps1')
 $runtime = Get-ForestPortableFullPath $RuntimeDir $repoRoot
 $build = Get-ForestPortableFullPath $BuildDir $repoRoot
+$cmakeCache = Join-Path $build 'CMakeCache.txt'
+if (-not (Test-Path -LiteralPath $cmakeCache -PathType Leaf)) { throw 'CMakeCache.txt missing; cannot verify Release build configuration.' }
+$buildTypeLine = Get-Content -LiteralPath $cmakeCache |
+    Where-Object { $_ -match '^CMAKE_BUILD_TYPE(:[^=]+)?=(.*)$' } |
+    Select-Object -First 1
+$buildConfiguration = ''
+if ($buildTypeLine -and ($buildTypeLine -match '^CMAKE_BUILD_TYPE(:[^=]+)?=(.*)$')) {
+    $buildConfiguration = $Matches[2]
+}
+if ($buildConfiguration -cne 'Release') { throw "Installer packages require a CMake Release build (found '$buildConfiguration')." }
 $release = Join-Path $workspace 'release'
 foreach ($path in @($runtime, $build, $release)) { Assert-ForestNoReparsePoints $path }
 foreach ($path in @("$runtime/forest.exe", "$build/forest.exe", "$runtime/app_data")) { Assert-ForestNoReparsePoints $path }
@@ -34,8 +44,27 @@ if (Test-Path "$runtime/app_data") {
 $header = [IO.File]::ReadAllText("$build/generated/BuildProvenance.h")
 function Read-BuildValue([string]$name) {
     $match = [regex]::Match($header, $name + '\s*=\s*R"forest\(([^)]*)\)forest"')
-    if (-not $match.Success) { throw "Build provenance missing: $name" }
-    return $match.Groups[1].Value
+    if ($match.Success) { return $match.Groups[1].Value }
+    if ($name -eq 'buildConfiguration' -and $header -match '\bbuildConfiguration\s*=\s*FOREST_BUILD_CONFIGURATION\s*;') {
+        $compileCommandsPath = Join-Path $build 'compile_commands.json'
+        if (-not (Test-Path -LiteralPath $compileCommandsPath -PathType Leaf)) {
+            throw 'Build provenance missing: buildConfiguration.'
+        }
+        $compileCommands = Get-Content -LiteralPath $compileCommandsPath -Raw | ConvertFrom-Json
+        $configurations = @(
+            foreach ($entry in $compileCommands) {
+                $command = if ($entry.arguments) { [string]::Join(' ', $entry.arguments) } else { $entry.command }
+                $configurationMatch = [regex]::Match($command, '-DFOREST_BUILD_CONFIGURATION=\\?"([^"\\]+)\\?"')
+                if ($configurationMatch.Success) { $configurationMatch.Groups[1].Value }
+            }
+        ) | Sort-Object -Unique
+        if ($configurations.Count -eq 1) { return @($configurations)[0] }
+    }
+    throw "Build provenance missing or ambiguous: $name"
+}
+$provenanceConfiguration = Read-BuildValue 'buildConfiguration'
+if ($provenanceConfiguration -cne $buildConfiguration) {
+    throw "Build provenance configuration '$provenanceConfiguration' does not match CMake configuration '$buildConfiguration'."
 }
 $version = Read-BuildValue 'appVersion'
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid application version.' }
@@ -81,7 +110,7 @@ $manifestFormat = if ($verificationOnly) { 'forest-verification-v1' } else { 'fo
 $manifest = [ordered]@{
     format = $manifestFormat; appVersion = $version; sourceRevision = (Read-BuildValue 'revision')
     sourceFingerprint = (Read-BuildValue 'sourceFingerprint'); qtVersion = (Read-BuildValue 'qtVersion')
-    compiler = (Read-BuildValue 'compiler'); configuration = 'Release'; sqliteSchema = 4
+    compiler = (Read-BuildValue 'compiler'); configuration = $buildConfiguration; sqliteSchema = 4
     createdUtc = [DateTime]::UtcNow.ToString('o'); installedData = '%LOCALAPPDATA%/Forest'
     files = $files
     packagingInputs = @('build_installer.ps1','forest_installer.nsi') | ForEach-Object {

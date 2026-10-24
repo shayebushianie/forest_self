@@ -391,6 +391,47 @@ bool testFullAccountBackupRestart(const QString& root)
     return expect(restarted, "restart restores and reopens the complete test account");
 }
 
+bool testIncompleteSqlite(const QString& root)
+{
+    const QString data = QDir(root).filePath("incomplete");
+    const QString path = QDir(data).filePath("user_1/sessions.sqlite");
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) return false;
+    const QString connection = QStringLiteral("snapshot_incomplete_fixture");
+    {
+        auto sql = QSqlDatabase::addDatabase("QSQLITE", connection);
+        sql.setDatabaseName(path);
+        if (!sql.open()) return false;
+        QSqlQuery query(sql);
+        if (!query.exec("CREATE TABLE schema_version(version INTEGER NOT NULL)") ||
+            !query.exec(QStringLiteral("INSERT INTO schema_version VALUES(%1)")
+                            .arg(DatabaseManager::schemaVersion()))) return false;
+        sql.close();
+    }
+    QSqlDatabase::removeDatabase(connection);
+    QString error;
+    bool ok = expect(!BackupSnapshot::create(data, data + "-copy", &error),
+                     "version marker without focus table cannot be a valid backup");
+    ok &= expect(!error.isEmpty(), "incomplete schema has a diagnostic");
+    DatabaseManager database(path.toStdString());
+    ok &= expect(!database.open(), "incomplete versioned database is not silently recreated");
+    uint32_t count = 99;
+    ok &= expect(!database.count(count) && count == 99,
+                 "failed initialization does not expose a usable database connection");
+    {
+        auto sql = QSqlDatabase::addDatabase("QSQLITE", connection);
+        sql.setDatabaseName(path);
+        sql.setConnectOptions("QSQLITE_OPEN_READONLY");
+        if (!sql.open()) return false;
+        QSqlQuery query(sql);
+        ok &= expect(query.exec("SELECT COUNT(*) FROM sqlite_master WHERE type='table'") &&
+                     query.next() && query.value(0).toInt() == 1,
+                     "rejection preserves the original incomplete schema");
+        sql.close();
+    }
+    QSqlDatabase::removeDatabase(connection);
+    return ok;
+}
+
 bool testFormats(const QString& root)
 {
     QString error;
@@ -456,6 +497,7 @@ int main(int argc, char** argv)
     ok &= testWalAndInventory(QDir(sandbox.path()).filePath("wal"));
     ok &= testFullAccountBackupRestart(QDir(sandbox.path()).filePath("full-account"));
     ok &= testFormats(QDir(sandbox.path()).filePath("formats"));
+    ok &= testIncompleteSqlite(QDir(sandbox.path()).filePath("incomplete-schema"));
     Logger::instance().close();
     QFile log(logPath);
     if (!log.open(QIODevice::ReadOnly)) return 1;

@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFile>
 #include <QTimer>
+#include "BuildProvenance.h"
 #include <QUuid>
 #include <cstdlib>
 #include <ctime>
@@ -46,6 +47,7 @@ int main(int argc, char* argv[])
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("Forest"));
     QCoreApplication::setApplicationName(QStringLiteral("Forest"));
+    QCoreApplication::setApplicationVersion(QString::fromUtf8(ForestBuild::appVersion.data()));
     AppStyle::installSmoothInteractions(app);
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 

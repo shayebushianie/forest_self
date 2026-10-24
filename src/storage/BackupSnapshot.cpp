@@ -89,6 +89,11 @@ bool checkSqlite(const QString& source, const QString& destination, QString* err
             const qlonglong version = ok ? query.value(0).toString().toLongLong(&validVersion) : 0;
             ok = ok && validVersion && version >= 1 && version <= DatabaseManager::schemaVersion() && !query.next();
             query.finish();
+            QString schemaError;
+            if (ok && !DatabaseManager::validateRecordSchema(db, static_cast<int>(version), &schemaError)) {
+                fail(error, schemaError);
+                ok = false;
+            }
             if (ok && !destination.isEmpty()) {
                 ok = query.exec("PRAGMA synchronous=FULL");
                 query.finish();
@@ -99,7 +104,7 @@ bool checkSqlite(const QString& source, const QString& destination, QString* err
                 }
                 query.finish();
             }
-            if (!ok) fail(error, QStringLiteral("SQLite 损坏、版本不受支持或快照失败：%1\n%2")
+            if (!ok && schemaError.isEmpty()) fail(error, QStringLiteral("SQLite 损坏、版本不受支持或快照失败：%1\n%2")
                                    .arg(source, query.lastError().text()));
             db.close();
         } else {

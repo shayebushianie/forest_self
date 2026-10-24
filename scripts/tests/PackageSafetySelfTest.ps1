@@ -12,6 +12,21 @@ function Assert-Throws([scriptblock]$Action, [string]$Description) {
     throw "Expected rejection: $Description"
 }
 
+function Invoke-ExpectedRejection([scriptblock]$Action, [string]$MessagePattern, [string]$Description) {
+    try {
+        & $Action
+    } catch {
+        if ($_.Exception.Message -match $MessagePattern) {
+            return
+        }
+        $script:regressionFailures.Add("$Description rejected for the wrong reason: $($_.Exception.Message)")
+        return
+    }
+    $script:regressionFailures.Add("$Description was accepted.")
+}
+
+$regressionFailures = [Collections.Generic.List[string]]::new()
+
 $fixtureId = [Guid]::NewGuid().ToString("N")
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) "forest-package-safety-$fixtureId"
 $repoRoot = Join-Path $fixtureRoot "repo"
@@ -108,4 +123,61 @@ foreach ($relative in @('Qt6Core.dll','Qt6Gui.dll','Qt6Widgets.dll','Qt6Sql.dll'
 }
 Assert-ForestRuntimeComplete $executable
 Assert-Throws { Invoke-ForestRuntimeSmoke $executable } 'startup without isolated portable marker'
+
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$installerSource = [IO.File]::ReadAllText((Join-Path $repoRoot 'scripts/installer/forest_installer.nsi'))
+if ($installerSource -notmatch '(?ms)!ifndef VERIFICATION_ID\s+!define MUI_FINISHPAGE_RUN .*\r?\n\s*!define MUI_FINISHPAGE_RUN_TEXT .*\r?\n\s*!endif') {
+    $regressionFailures.Add('Verification installer does not guard both finish-page run macros.')
+}
+if ($installerSource -notmatch '(?ms)Function CheckDestination\r?\n(?:(?!FunctionEnd).)*?StrCmp \$ValidateMode 0 validate_registration_done\r?\n\s*ReadRegStr \$2 HKCU "\$\{PRODUCT_REGKEY\}" "InstallDir"\r?\n\s*StrCmp \$2 \$INSTDIR invalid_destination\r?\n\s*validate_registration_done:') {
+    $regressionFailures.Add('Validation mode does not reject overwriting its registered install directory.')
+}
+
+$fixtureQtBuild = Join-Path $fixtureRoot 'qt-mismatch-metadata'
+$fixtureCmakeQt = Join-Path $fixtureRoot 'cmake-qt'
+$fixtureExplicitQt = Join-Path $fixtureRoot 'explicit-qt'
+New-Item -ItemType Directory -Path $fixtureQtBuild, (Join-Path $fixtureCmakeQt 'lib/cmake/Qt6'), (Join-Path $fixtureExplicitQt 'bin') -Force | Out-Null
+[IO.File]::WriteAllText((Join-Path $fixtureQtBuild 'CMakeCache.txt'), @(
+    'CMAKE_BUILD_TYPE:STRING=Release'
+    "CMAKE_CXX_COMPILER:FILEPATH=$(Join-Path $fixtureRoot 'compiler/bin/g++.exe')"
+    "Qt6_DIR:PATH=$(Join-Path $fixtureCmakeQt 'lib/cmake/Qt6')"
+) -join "`r`n")
+[IO.File]::WriteAllText((Join-Path $fixtureExplicitQt 'bin/windeployqt.exe'), 'synthetic executable; never launched')
+Invoke-ExpectedRejection -Action {
+    & (Join-Path $repoRoot 'scripts/package_portable.ps1') -BuildDir $fixtureQtBuild `
+        -OutputDir "artifacts/.package-safety-fixture-$fixtureId" -QtDir $fixtureExplicitQt -NoBuild
+} -MessagePattern 'does not match Qt6_DIR.*CMakeCache' -Description 'explicit QtDir mismatch'
+
+$fixtureInstallerBuild = Join-Path $fixtureRoot 'installer-build-metadata'
+New-Item -ItemType Directory -Path $fixtureInstallerBuild | Out-Null
+[IO.File]::WriteAllText((Join-Path $fixtureInstallerBuild 'CMakeCache.txt'), 'CMAKE_BUILD_TYPE:STRING=Debug')
+Invoke-ExpectedRejection -Action {
+    & (Join-Path $repoRoot 'scripts/installer/build_installer.ps1') `
+        -RuntimeDir "artifacts/.installer-safety-fixture-$fixtureId" -BuildDir $fixtureInstallerBuild `
+        -NsisCompiler (Join-Path $fixtureRoot 'not-used-makensis.exe')
+} -MessagePattern 'Release build' -Description 'installer non-Release build metadata'
+
+$tokens = $null
+$parseErrors = $null
+$installerAst = [Management.Automation.Language.Parser]::ParseFile(
+    (Join-Path $repoRoot 'scripts/installer/build_installer.ps1'), [ref]$tokens, [ref]$parseErrors)
+if ($parseErrors.Count) { throw 'Installer script syntax is invalid.' }
+$reader = $installerAst.Find({ param($node)
+    $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Read-BuildValue'
+}, $true)
+if (-not $reader) { throw 'Installer build provenance reader is missing.' }
+. ([scriptblock]::Create($reader.Extent.Text))
+$build = $fixtureInstallerBuild
+$header = 'inline constexpr auto buildConfiguration = FOREST_BUILD_CONFIGURATION;'
+$commands = @(@{ command = 'g++ -DFOREST_BUILD_CONFIGURATION=\"Release\"' })
+[IO.File]::WriteAllText((Join-Path $build 'compile_commands.json'),
+    (ConvertTo-Json -InputObject $commands -Compress))
+if ((Read-BuildValue 'buildConfiguration') -cne 'Release') {
+    $regressionFailures.Add('Single Release compile configuration was truncated or rejected.')
+}
+
+if ($regressionFailures.Count) {
+    throw "Release-script regression checks failed:`r`n - $($regressionFailures -join "`r`n - ")"
+}
+
 Write-Output "Package and runtime preflight self-test passed. Synthetic fixture retained at: $fixtureRoot"

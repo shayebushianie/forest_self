@@ -124,6 +124,7 @@ DatabaseManager::~DatabaseManager()
 bool DatabaseManager::open()
 {
     lastError_.clear();
+    if (database_.isOpen()) return true;
     if (!QDir().mkpath(QFileInfo(databasePath_).dir().absolutePath())) {
         setError(QStringLiteral("无法创建专注数据目录"));
         return false;
@@ -133,23 +134,28 @@ bool DatabaseManager::open()
     database_.setDatabaseName(databasePath_);
     if (!database_.open()) {
         setError(QStringLiteral("无法打开专注数据库：%1").arg(database_.lastError().text()));
+        close();
         return false;
     }
 
-    QSqlQuery pragmas(database_);
-    if (!pragmas.exec(QStringLiteral("PRAGMA foreign_keys = ON")) ||
-        !pragmas.exec(QStringLiteral("PRAGMA synchronous = FULL"))) {
-        setError(QStringLiteral("无法配置专注数据库：%1").arg(pragmas.lastError().text()));
-        return false;
-    }
-    if (!createSchema()) return false;
-    if (!pragmas.exec(QStringLiteral("PRAGMA journal_mode = WAL"))) {
-        setError(QStringLiteral("无法配置专注数据库：%1").arg(pragmas.lastError().text()));
-        return false;
-    }
-    pragmas.finish();
-    if (!migrateLegacyRecords()) return false;
-    return recoverTerminalIntents() && recoverFromCrash();
+    const bool initialized = [this]() {
+        QSqlQuery pragmas(database_);
+        if (!pragmas.exec(QStringLiteral("PRAGMA foreign_keys = ON")) ||
+            !pragmas.exec(QStringLiteral("PRAGMA synchronous = FULL"))) {
+            setError(QStringLiteral("无法配置专注数据库：%1").arg(pragmas.lastError().text()));
+            return false;
+        }
+        if (!createSchema()) return false;
+        if (!pragmas.exec(QStringLiteral("PRAGMA journal_mode = WAL"))) {
+            setError(QStringLiteral("无法配置专注数据库：%1").arg(pragmas.lastError().text()));
+            return false;
+        }
+        pragmas.finish();
+        if (!migrateLegacyRecords()) return false;
+        return recoverTerminalIntents() && recoverFromCrash();
+    }();
+    if (!initialized) close();
+    return initialized;
 }
 
 void DatabaseManager::close()
@@ -159,6 +165,19 @@ void DatabaseManager::close()
     database_.close();
     database_ = QSqlDatabase();
     QSqlDatabase::removeDatabase(name);
+}
+
+bool DatabaseManager::validateRecordSchema(const QSqlDatabase& database, int version, QString* error)
+{
+    QSqlQuery query(database);
+    QString columns = QStringLiteral("record_id,plant_type,planned_minutes,actual_seconds,start_timestamp,"
+        "status,violation_count,growth_stage,coins_earned,tag_id,focus_mode,grid_index");
+    if (version >= 4) columns += QStringLiteral(",interrupted");
+    if (!query.exec(QStringLiteral("SELECT %1 FROM focus_records LIMIT 0").arg(columns))) {
+        if (error) *error = QStringLiteral("专注记录表缺失或结构不完整：%1").arg(query.lastError().text());
+        return false;
+    }
+    return true;
 }
 
 bool DatabaseManager::createSchema()
@@ -198,6 +217,9 @@ bool DatabaseManager::createSchema()
             }
         }
     }
+
+    if (hasVersionRow && !validateRecordSchema(database_, static_cast<int>(existingVersion), &lastError_))
+        return false;
 
     if (!database_.transaction()) {
         setError(database_.lastError().text());

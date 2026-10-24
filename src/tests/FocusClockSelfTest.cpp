@@ -162,6 +162,19 @@ bool testClocks(const QString& root)
                 db.readById(8)->status == FocusRecordStatus::Success &&
                 db.readById(8)->coinsEarned == 2,
                 "retry preserves success and emits exactly one durable result")) return false;
+
+    focus.startFocus(0, 10, FocusController::TimerMode::COUNTDOWN,
+                     FocusController::FocusMode::GENTLE_MODE);
+    clock.milliseconds += 10750;
+    focus.handleViolationDetected(QStringLiteral("blocked"));
+    focus.pauseFocus();
+    clock.milliseconds += 300250;
+    focus.tick();
+    focus.handleSafeWindowDetected();
+    if (!expect(focus.currentState() == FocusController::State::RUNNING &&
+                focus.actualSeconds() == 11 && focus.effectiveSeconds() == 11,
+                "safe time after pause auto-resume is not charged to the prior violation")) return false;
+    focus.abandonFocus();
     return true;
 }
 }
